@@ -9,6 +9,7 @@ function toNum(v) {
 
 function mapSerie(record) {
   const s = record.get('s').properties;
+  const creadores = record.get('creadores') || [];
   return {
     id: s.id,
     titulo: s.titulo,
@@ -17,7 +18,7 @@ function mapSerie(record) {
     duracion: toNum(s.duracion),
     imagen: s.imagen || null,
     generos: record.get('generos') || [],
-    creador: record.get('creador') || null,
+    creador: creadores[0] || null,
     actores: record.get('actores') || [],
   };
 }
@@ -32,9 +33,10 @@ router.get('/', async (req, res) => {
       OPTIONAL MATCH (a:Actor)-[act:ACTUÓ_EN]->(s)
       RETURN s,
              collect(DISTINCT g.nombre)                                        AS generos,
-             d.nombre                                                           AS creador,
+             collect(DISTINCT d.nombre)                                        AS creadores,
              collect(DISTINCT {nombre: a.nombre, personaje: act.personaje})    AS actores
       ORDER BY s.anio DESC
+      LIMIT 50
     `);
     res.json(records.map(mapSerie));
   } catch (err) {
@@ -42,39 +44,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/series/:id — detalle de una serie
-router.get('/:id', async (req, res) => {
-  try {
-    const records = await query(`
-      MATCH (s:Serie {id: $id})
-      OPTIONAL MATCH (s)-[:PERTENECE_A]->(g:Genero)
-      OPTIONAL MATCH (d:Director)-[:DIRIGIÓ]->(s)
-      OPTIONAL MATCH (a:Actor)-[act:ACTUÓ_EN]->(s)
-      OPTIONAL MATCH (u:Usuario)-[c:CALIFICÓ]->(s)
-      RETURN s,
-             collect(DISTINCT g.nombre)                                        AS generos,
-             d.nombre                                                           AS creador,
-             collect(DISTINCT {nombre: a.nombre, personaje: act.personaje})    AS actores,
-             avg(c.puntuacion)                                                  AS promedio,
-             count(c)                                                           AS totalCalificaciones
-    `, { id: req.params.id });
-
-    if (records.length === 0) return res.status(404).json({ error: 'Serie no encontrada' });
-
-    const record = records[0];
-    const prom = record.get('promedio');
-    const total = record.get('totalCalificaciones');
-
-    res.json({
-      ...mapSerie(record),
-      promedio: prom ? Math.round(toNum(prom) * 10) / 10 : null,
-      totalCalificaciones: toNum(total),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
+// ⚠️ IMPORTANTE: esta ruta debe ir ANTES de /:id para evitar conflicto
 // GET /api/series/recommended/:email — series recomendadas según amigos
 router.get('/recommended/:email', async (req, res) => {
   try {
@@ -90,7 +60,7 @@ router.get('/recommended/:email', async (req, res) => {
       OPTIONAL MATCH (a:Actor)-[act:ACTUÓ_EN]->(s)
       RETURN s,
              collect(DISTINCT g.nombre)                                        AS generos,
-             d.nombre                                                           AS creador,
+             collect(DISTINCT d.nombre)                                        AS creadores,
              collect(DISTINCT {nombre: a.nombre, personaje: act.personaje})    AS actores,
              promAmigos, votosAmigos
     `, { email: req.params.email });
@@ -107,7 +77,7 @@ router.get('/recommended/:email', async (req, res) => {
         OPTIONAL MATCH (a:Actor)-[act:ACTUÓ_EN]->(s)
         RETURN s,
                collect(DISTINCT g.nombre)                                        AS generos,
-               d.nombre                                                           AS creador,
+               collect(DISTINCT d.nombre)                                        AS creadores,
                collect(DISTINCT {nombre: a.nombre, personaje: act.personaje})    AS actores,
                promAmigos, votosAmigos
       `);
@@ -118,6 +88,39 @@ router.get('/recommended/:email', async (req, res) => {
       promAmigos: Math.round(toNum(record.get('promAmigos')) * 10) / 10,
       votosAmigos: toNum(record.get('votosAmigos')),
     })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/series/:id — detalle de una serie
+router.get('/:id', async (req, res) => {
+  try {
+    const records = await query(`
+      MATCH (s:Serie {id: $id})
+      OPTIONAL MATCH (s)-[:PERTENECE_A]->(g:Genero)
+      OPTIONAL MATCH (d:Director)-[:DIRIGIÓ]->(s)
+      OPTIONAL MATCH (a:Actor)-[act:ACTUÓ_EN]->(s)
+      OPTIONAL MATCH (u:Usuario)-[c:CALIFICÓ]->(s)
+      RETURN s,
+             collect(DISTINCT g.nombre)                                        AS generos,
+             collect(DISTINCT d.nombre)                                        AS creadores,
+             collect(DISTINCT {nombre: a.nombre, personaje: act.personaje})    AS actores,
+             avg(c.puntuacion)                                                  AS promedio,
+             count(c)                                                           AS totalCalificaciones
+    `, { id: req.params.id });
+
+    if (records.length === 0) return res.status(404).json({ error: 'Serie no encontrada' });
+
+    const record = records[0];
+    const prom = record.get('promedio');
+    const total = record.get('totalCalificaciones');
+
+    res.json({
+      ...mapSerie(record),
+      promedio: prom ? Math.round(toNum(prom) * 10) / 10 : null,
+      totalCalificaciones: toNum(total),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
