@@ -36,7 +36,6 @@ router.get('/', async (req, res) => {
              collect(DISTINCT d.nombre)                                        AS creadores,
              collect(DISTINCT {nombre: a.nombre, personaje: act.personaje})    AS actores
       ORDER BY s.anio DESC
-      LIMIT 50
     `);
     res.json(records.map(mapSerie));
   } catch (err) {

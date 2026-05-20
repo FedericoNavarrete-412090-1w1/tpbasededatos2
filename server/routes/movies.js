@@ -35,7 +35,6 @@ router.get('/', async (req, res) => {
              collect(DISTINCT d.nombre)             AS directores,
              collect(DISTINCT {nombre: a.nombre, personaje: act.personaje}) AS actores
       ORDER BY p.anio DESC
-      LIMIT 50
     `);
     res.json(records.map(mapPelicula));
   } catch (err) {

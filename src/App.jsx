@@ -2047,12 +2047,12 @@ export default function App() {
 
     const navItems = [
         { id: 'home', icon: Home, label: 'Inicio' },
+        { id: 'graph', icon: Network, label: 'Descubrir' },
         { id: 'mylist', icon: Bookmark, label: 'Mi Lista', count: myList.length },
         { id: 'ratings', icon: Star, label: 'Calificadas', count: ratedList.length },
         { id: 'recommendations', icon: Share2, label: 'Recomendaciones', count: recommendations.length },
         { id: 'friends', icon: Users, label: 'Amigos' },
         { id: 'activity', icon: Activity, label: 'Actividad' },
-        { id: 'graph', icon: Network, label: 'Descubrir' },
         { id: 'profile', icon: User, label: 'Perfil' },
     ];
 
@@ -2236,7 +2236,6 @@ export default function App() {
                                                     {/* Content Overlay */}
                                                     <div className="absolute bottom-0 left-0 p-8 md:p-14 z-20 w-full md:w-2/3 text-left">
                                                         <div className="flex gap-2 mb-3">
-                                                            <NeonBadge color="blue">Recomendado por Neo4j</NeonBadge>
                                                             <NeonBadge color="purple">{item.type}</NeonBadge>
                                                         </div>
                                                         <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-lg tracking-tight leading-tight">
