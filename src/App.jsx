@@ -715,13 +715,17 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
     const [error, setError] = useState(null);
     const [hoveredNode, setHoveredNode] = useState(null);
     const [zoom, setZoom] = useState(1);
+    const [panX, setPanX] = useState(0);
+    const [panY, setPanY] = useState(0);
     const [visibleLinks, setVisibleLinks] = useState({
         ES_AMIGO_DE: true, LE_GUSTÓ: true, GUARDÓ: true, CALIFICÓ: true
     });
-    
+
     const dragNodeRef = useRef(null);
     const nodesRef = useRef([]);
     const containerRef = useRef(null);
+    const isPanningRef = useRef(false);
+    const dragMovedRef = useRef(false);
 
     const width = 1100;
     const height = 650;
@@ -800,14 +804,21 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
 
     const handlePointerDown = (e, node) => {
         e.preventDefault();
+        e.stopPropagation();
+        dragMovedRef.current = false;
         dragNodeRef.current = node;
         node.fx = node.x; node.fy = node.y;
         const container = containerRef.current;
         const rect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+        const startX = e.clientX, startY = e.clientY;
+        const cpx = panX, cpy = panY, cz = zoom;
         const handlePointerMove = (moveEvent) => {
             if (!dragNodeRef.current) return;
-            const x = (moveEvent.clientX - rect.left - rect.width / 2) / zoom + width / 2;
-            const y = (moveEvent.clientY - rect.top - rect.height / 2) / zoom + height / 2;
+            if (Math.abs(moveEvent.clientX - startX) > 4 || Math.abs(moveEvent.clientY - startY) > 4) {
+                dragMovedRef.current = true;
+            }
+            const x = (moveEvent.clientX - rect.left - rect.width / 2 - cpx) / cz + width / 2;
+            const y = (moveEvent.clientY - rect.top - rect.height / 2 - cpy) / cz + height / 2;
             dragNodeRef.current.fx = Math.max(25, Math.min(width - 25, x));
             dragNodeRef.current.fy = Math.max(25, Math.min(height - 25, y));
         };
@@ -818,6 +829,25 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
         };
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
+    };
+
+    const handlePanStart = (e) => {
+        if (dragNodeRef.current) return;
+        isPanningRef.current = true;
+        const startX = e.clientX, startY = e.clientY;
+        const startPanX = panX, startPanY = panY;
+        const onMove = (mv) => {
+            if (!isPanningRef.current) return;
+            setPanX(startPanX + (mv.clientX - startX));
+            setPanY(startPanY + (mv.clientY - startY));
+        };
+        const onUp = () => {
+            isPanningRef.current = false;
+            window.removeEventListener('pointermove', onMove);
+            window.removeEventListener('pointerup', onUp);
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
     };
 
     const stats = React.useMemo(() => {
@@ -835,18 +865,43 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
         return data.links.filter(l => l.source === hoveredNode.id || l.target === hoveredNode.id);
     }, [hoveredNode, data.links]);
 
-    if (loading) return (<div className="flex flex-col items-center justify-center py-32 text-gray-400"><div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" /><p>Consultando base de datos Neo4j en tiempo real...</p></div>);
+    // IDs de contenido conectado directamente al usuario actual
+    const myContentIds = React.useMemo(() => {
+        const currentUserId = data.nodes.find(n => n.isCurrentUser)?.id;
+        if (!currentUserId) return new Set();
+        return new Set(
+            data.links
+                .filter(l => l.source === currentUserId || l.target === currentUserId)
+                .map(l => l.source === currentUserId ? l.target : l.source)
+        );
+    }, [data.nodes, data.links]);
+
+    const visibleNodeIds = React.useMemo(() => {
+        return new Set(data.nodes.filter(node => {
+            if (!visibleLinks.ES_AMIGO_DE) {
+                if (node.type === 'Usuario' && !node.isCurrentUser) return false;
+                if (node.type !== 'Usuario' && !myContentIds.has(node.id)) return false;
+            }
+            return true;
+        }).map(n => n.id));
+    }, [data.nodes, visibleLinks.ES_AMIGO_DE, myContentIds]);
+
+    if (loading) return (<div className="flex flex-col items-center justify-center py-32 text-gray-400"><div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" /><p>Cargando...</p></div>);
     if (error) return (<div className="text-center py-20 text-red-400 bg-gray-900/40 border border-red-900/20 rounded-3xl"><Database size={48} className="mx-auto mb-4 opacity-50 text-red-500" /><p>{error}</p></div>);
 
-    const filteredLinks = data.links.filter(l => visibleLinks[l.type]);
+    const filteredLinks = data.links.filter(l =>
+        visibleLinks[l.type] &&
+        visibleNodeIds.has(l.source) &&
+        visibleNodeIds.has(l.target)
+    );
 
     return (
         <div className="animate-in fade-in duration-500 text-left">
             <div className="mb-6">
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                    <Database className="text-blue-500" size={36} /> Grafo de Relaciones Neo4j
+                    <Network className="text-blue-500" size={36} /> Descubrir
                 </h1>
-                <p className="text-gray-400 text-sm">Visualiza y arrastra las conexiones reales de la base de datos en vivo. Usa los filtros para controlar qué relaciones se muestran.</p>
+                <p className="text-gray-400 text-sm">Explorá cómo se conectan tus gustos con los de tus amigos. Arrastrá los nodos y usá los filtros para navegar tus conexiones.</p>
             </div>
 
             {/* Stats Cards */}
@@ -887,7 +942,7 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
             </div>
 
             {/* Graph Canvas */}
-            <div ref={containerRef} className="relative bg-gray-950/80 border border-white/10 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.9)] select-none" style={{ height: '650px' }}>
+            <div ref={containerRef} className="relative bg-gray-950/80 border border-white/10 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.9)] select-none cursor-grab active:cursor-grabbing" onPointerDown={handlePanStart} style={{ height: '650px' }}>
                 {/* Grid bg */}
                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-[0.04]">
                     <defs><pattern id="graphGrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
@@ -902,7 +957,7 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
                         height: `${height}px`,
                         left: '50%',
                         top: '50%',
-                        transform: `translate(-50%, -50%) scale(${zoom})`,
+                        transform: `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom})`,
                         transformOrigin: 'center center',
                     }}
                 >
@@ -954,7 +1009,13 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
 
                     {/* Nodes Layer */}
                     <div className="absolute inset-0 pointer-events-auto z-10">
-                        {data.nodes.map((node) => {
+                        {data.nodes.filter(node => {
+                            if (!visibleLinks.ES_AMIGO_DE) {
+                                if (node.type === 'Usuario' && !node.isCurrentUser) return false;
+                                if (node.type !== 'Usuario' && !myContentIds.has(node.id)) return false;
+                            }
+                            return true;
+                        }).map((node) => {
                             const isUser = node.type === 'Usuario';
                             const isCurrent = node.isCurrentUser;
                             const hasImage = !!node.imagen;
@@ -980,7 +1041,7 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
                                     onPointerDown={(e) => handlePointerDown(e, node)}
                                     onMouseEnter={() => setHoveredNode(node)}
                                     onMouseLeave={() => setHoveredNode(null)}
-                                    onClick={() => { if (!isUser) { onItemClick({ id: node.id, type: node.type === 'Serie' ? 'Serie' : 'Pelicula', titulo: node.label, imagen: node.imagen }); } }}
+                                    onClick={() => { if (!isUser && !dragMovedRef.current) { onItemClick({ id: node.id, type: node.type === 'Serie' ? 'Serie' : 'Pelicula', titulo: node.label, imagen: node.imagen }); } }}
                                 >
                                     {isUser ? (<User size={isCurrent ? 22 : 18} />) : hasImage ? (
                                         <img src={node.imagen} alt={node.label} className="w-full h-full rounded-full object-cover pointer-events-none" />
@@ -1022,7 +1083,6 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
                             <div className="min-w-0 flex-1">
                                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">{hoveredNode.type}</p>
                                 <p className="text-white text-sm font-bold truncate leading-tight">{hoveredNode.label}</p>
-                                <p className="text-gray-500 text-[10px] truncate mt-0.5 font-mono">{hoveredNode.id}</p>
                             </div>
                         </div>
                         {hoveredConnections.length > 0 && (
@@ -1050,22 +1110,10 @@ const GraphDashboard = ({ currentUser, onItemClick }) => {
                 <div className="absolute top-4 right-4 z-30 flex flex-col gap-1.5">
                     <button onClick={() => setZoom(z => Math.min(z + 0.15, 1.8))} className="w-8 h-8 rounded-xl bg-gray-800/90 border border-white/10 text-white flex items-center justify-center hover:bg-gray-700/90 transition-colors text-sm font-bold shadow-lg backdrop-blur-sm" title="Acercar">+</button>
                     <button onClick={() => setZoom(z => Math.max(z - 0.15, 0.5))} className="w-8 h-8 rounded-xl bg-gray-800/90 border border-white/10 text-white flex items-center justify-center hover:bg-gray-700/90 transition-colors text-sm font-bold shadow-lg backdrop-blur-sm" title="Alejar">−</button>
-                    <button onClick={() => setZoom(1)} className="w-8 h-8 rounded-xl bg-gray-800/90 border border-white/10 text-gray-400 flex items-center justify-center hover:bg-gray-700/90 hover:text-white transition-colors text-[10px] font-bold shadow-lg backdrop-blur-sm" title="Reset">1:1</button>
+                    <button onClick={() => { setZoom(1); setPanX(0); setPanY(0); }} className="w-8 h-8 rounded-xl bg-gray-800/90 border border-white/10 text-gray-400 flex items-center justify-center hover:bg-gray-700/90 hover:text-white transition-colors text-[10px] font-bold shadow-lg backdrop-blur-sm" title="Restablecer vista">1:1</button>
                 </div>
             </div>
 
-            {/* Query terminal */}
-            <div className="mt-5 bg-black/95 rounded-2xl p-4 font-mono text-xs border border-white/10 text-green-400 flex flex-col gap-2 shadow-inner relative">
-                <div className="absolute right-3 top-3 text-[10px] text-gray-500 uppercase tracking-widest font-bold font-sans">Consulta Cypher</div>
-                <div className="flex items-center gap-2"><span className="text-blue-500 font-bold">$</span><span className="text-gray-300">MATCH (u:Usuario {"{"}email: "{currentUser.email}"{"}"})</span></div>
-                <div className="pl-4 text-gray-300">{"OPTIONAL MATCH (u)-[r1:LE_GUSTÓ|GUARDÓ|CALIFICÓ]->(c1) WHERE c1:Pelicula OR c1:Serie"}</div>
-                <div className="pl-4 text-gray-300">{"OPTIONAL MATCH (u)-[r2:ES_AMIGO_DE]->(f:Usuario)-[r3:LE_GUSTÓ|GUARDÓ|CALIFICÓ]->(c2) WHERE c2:Pelicula OR c2:Serie"}</div>
-                <div className="pl-4 text-green-400 font-semibold">RETURN u, f, c1, c2, r1, r2, r3</div>
-                <div className="flex items-center gap-2 mt-1">
-                    <span className="w-2 h-3.5 bg-green-400 animate-pulse" />
-                    <span className="text-[10px] text-gray-500 font-sans">Visualizando {stats.totalNodes} nodos y {stats.totalLinks} relaciones en tiempo real desde Neo4j</span>
-                </div>
-            </div>
             <style dangerouslySetInnerHTML={{ __html: `@keyframes graphScan { 0% { transform: translateY(0); } 100% { transform: translateY(650px); } }` }} />
         </div>
     );
@@ -2027,7 +2075,7 @@ export default function App() {
         { id: 'recommendations', icon: Share2, label: 'Recomendaciones', count: recommendations.length },
         { id: 'friends', icon: Users, label: 'Amigos' },
         { id: 'activity', icon: Activity, label: 'Actividad' },
-        { id: 'graph', icon: Database, label: 'Insights Neo4j' },
+        { id: 'graph', icon: Network, label: 'Descubrir' },
         { id: 'profile', icon: User, label: 'Perfil' },
     ];
 
