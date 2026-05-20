@@ -30,7 +30,8 @@ import {
     Moon,
     GripVertical,
     LayoutGrid,
-    List
+    List,
+    Trash2
 } from 'lucide-react';
 
 // mockContent removed — using real API data
@@ -73,7 +74,7 @@ const NeonBadge = ({ children, color = 'blue' }) => {
     );
 };
 
-const ContentCard = ({ item, onClick, onAddToList, onLike, onRecommend, inMyList, isLiked }) => (
+const ContentCard = ({ item, onClick, onAddToList, onLike, onRecommend, onRate, inMyList, isLiked }) => (
     <div
         className="group relative flex-none w-44 md:w-52 cursor-pointer z-10 hover:z-20"
         onClick={() => onClick(item)}
@@ -103,10 +104,10 @@ const ContentCard = ({ item, onClick, onAddToList, onLike, onRecommend, inMyList
                     <div className="flex items-center gap-1.5">
                         <button
                             className="bg-white text-black p-1.5 rounded-full hover:bg-gray-200 hover:scale-110 transition-transform shadow"
-                            onClick={(e) => { e.stopPropagation(); }}
-                            title="Reproducir"
+                            onClick={(e) => { e.stopPropagation(); onRecommend?.(item); }}
+                            title="Recomendar"
                         >
-                            <Play size={12} fill="currentColor" />
+                            <Share2 size={12} />
                         </button>
                         <button
                             className={`p-1.5 rounded-full hover:scale-110 transition-transform ${inMyList ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/40' : 'bg-white/10 text-gray-300 hover:text-white hover:bg-white/20'}`}
@@ -125,7 +126,7 @@ const ContentCard = ({ item, onClick, onAddToList, onLike, onRecommend, inMyList
                     </div>
                     <button
                         className="p-1.5 rounded-full bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/30 hover:scale-110 transition-all"
-                        onClick={(e) => { e.stopPropagation(); onRecommend?.(item); }}
+                        onClick={(e) => { e.stopPropagation(); onRate?.(item); }}
                         title="Calificar"
                     >
                         <Star size={11} fill="currentColor" />
@@ -137,7 +138,7 @@ const ContentCard = ({ item, onClick, onAddToList, onLike, onRecommend, inMyList
 );
 
 // ─── BrowseAllModal ────────────────────────────────────────────────────────
-const BrowseAllModal = ({ title, items, onClose, onCardClick, onAddToList, onLike, onRecommend, myListIds, likedIds }) => {
+const BrowseAllModal = ({ title, items, onClose, onCardClick, onAddToList, onLike, onRecommend, onRate, myListIds, likedIds }) => {
     const [q, setQ] = React.useState('');
     const [sort, setSort] = React.useState('default');
 
@@ -225,6 +226,7 @@ const BrowseAllModal = ({ title, items, onClose, onCardClick, onAddToList, onLik
                                         onAddToList={onAddToList}
                                         onLike={onLike}
                                         onRecommend={onRecommend}
+                                        onRate={onRate}
                                         inMyList={myListIds?.has(item.id)}
                                         isLiked={likedIds?.has(item.id)}
                                     />
@@ -238,7 +240,7 @@ const BrowseAllModal = ({ title, items, onClose, onCardClick, onAddToList, onLik
     );
 };
 
-const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList, onLike, onRecommend, myListIds, likedIds, pageSize = 20 }) => {
+const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList, onLike, onRecommend, onRate, myListIds, likedIds, pageSize = 20 }) => {
     const scrollRef = React.useRef(null);
     const [shown, setShown] = React.useState(pageSize);
     const [browseOpen, setBrowseOpen] = React.useState(false);
@@ -287,7 +289,7 @@ const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList
                 <div className="flex gap-4 md:gap-5 snap-x snap-mandatory" style={{ paddingTop: '56px', paddingBottom: '32px', paddingLeft: '8px', paddingRight: '8px' }}>
                     {visibleItems.map((item, idx) => (
                         <div key={`${item.id}-${idx}`} className="snap-start flex-none">
-                            <ContentCard item={item} onClick={onCardClick} onAddToList={onAddToList} onLike={onLike} onRecommend={onRecommend} inMyList={myListIds.has(item.id)} isLiked={likedIds.has(item.id)} />
+                            <ContentCard item={item} onClick={onCardClick} onAddToList={onAddToList} onLike={onLike} onRecommend={onRecommend} onRate={onRate} inMyList={myListIds.has(item.id)} isLiked={likedIds.has(item.id)} />
                         </div>
                     ))}
                 </div>
@@ -300,6 +302,8 @@ const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList
                     onCardClick={onCardClick}
                     onAddToList={onAddToList}
                     onLike={onLike}
+                    onRecommend={onRecommend}
+                    onRate={onRate}
                     myListIds={myListIds}
                     likedIds={likedIds}
                 />
@@ -308,13 +312,17 @@ const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList
     );
 };
 
-const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, myListIds, likedIds }) => {
+const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, onRecommend, myListIds, likedIds }) => {
     const [detail, setDetail] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [ratingOpen, setRatingOpen] = React.useState(false);
+    const [comments, setComments] = React.useState([]);
+    const [newComment, setNewComment] = React.useState('');
+    const [posting, setPosting] = React.useState(false);
 
     const inMyList = myListIds?.has(item.id);
     const isLiked = likedIds?.has(item.id);
+    const contentType = item.type === 'Serie' ? 'series' : 'movies';
 
     React.useEffect(() => {
         if (!item) return;
@@ -324,6 +332,32 @@ const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, myListId
             .catch(() => setDetail(null))
             .finally(() => setLoading(false));
     }, [item?.id]);
+
+    React.useEffect(() => {
+        if (!item) return;
+        api.getComments(contentType, item.id)
+            .then(setComments)
+            .catch(() => setComments([]));
+    }, [item?.id, contentType]);
+
+    const handlePostComment = async () => {
+        if (!newComment.trim() || !currentEmail) return;
+        setPosting(true);
+        try {
+            await api.postComment(contentType, item.id, currentEmail, newComment.trim());
+            setNewComment('');
+            const updated = await api.getComments(contentType, item.id);
+            setComments(updated);
+        } catch (e) { console.error(e); }
+        finally { setPosting(false); }
+    };
+
+    const handleDeleteComment = async (commentId) => {
+        try {
+            await api.deleteComment(contentType, item.id, commentId, currentEmail);
+            setComments(prev => prev.filter(c => c.commentId !== commentId));
+        } catch (e) { console.error(e); }
+    };
 
     React.useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -412,10 +446,10 @@ const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, myListId
                                 <div className="flex flex-wrap items-center gap-3 mt-4">
                                     <button 
                                         className="flex items-center justify-center gap-2 bg-white text-black px-6 py-2.5 rounded-full font-bold hover:bg-gray-200 hover:scale-105 transition-all text-sm shadow"
-                                        onClick={(e) => { e.stopPropagation(); }}
-                                        title="Reproducir"
+                                        onClick={(e) => { e.stopPropagation(); onRecommend?.(item); }}
+                                        title="Recomendar"
                                     >
-                                        <Play fill="currentColor" size={16} /> Reproducir
+                                        <Share2 size={16} /> Recomendar
                                     </button>
                                     
                                     <button 
@@ -518,6 +552,60 @@ const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, myListId
                                 </div>
                             </div>
                         )}
+
+                        {/* Comments Section */}
+                        <div className="border-t border-white/10 pt-6 text-left">
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Comentarios ({comments.length})</h3>
+                            {currentEmail && (
+                                <div className="flex items-start gap-3 mb-5">
+                                    <input
+                                        type="text"
+                                        value={newComment}
+                                        onChange={e => setNewComment(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePostComment(); } }}
+                                        placeholder="Escribí un comentario..."
+                                        className="flex-1 bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                    />
+                                    <button
+                                        onClick={handlePostComment}
+                                        disabled={!newComment.trim() || posting}
+                                        className="px-4 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {posting ? <span className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" /> : null}
+                                        Postear
+                                    </button>
+                                </div>
+                            )}
+                            {comments.length === 0 ? (
+                                <p className="text-gray-500 text-sm py-4 text-center">Sin comentarios aún. ¡Sé el primero en comentar!</p>
+                            ) : (
+                                <div className="space-y-3 max-h-64 overflow-y-auto">
+                                    {comments.map((c, idx) => (
+                                        <div key={c.commentId || idx} className="bg-gray-800/30 border border-gray-800 rounded-xl p-3 flex items-start gap-3 group">
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                                                {(c.nombre || c.email)[0].toUpperCase()}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-white text-sm font-medium">{c.nombre || c.email}</p>
+                                                    <p className="text-gray-500 text-[10px]">{timeAgo(c.fecha)}</p>
+                                                </div>
+                                                <p className="text-gray-300 text-sm leading-relaxed">{c.mensaje}</p>
+                                            </div>
+                                            {currentEmail === c.email && (
+                                                <button
+                                                    onClick={() => handleDeleteComment(c.commentId)}
+                                                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                                                    title="Eliminar comentario"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
                 </div>
@@ -1030,9 +1118,9 @@ const LoginView = ({ onLogin, onUserChange }) => {
     );
 };
 
-const SearchResultsView = ({ results, onItemClick }) => {
+const SearchResultsView = ({ results, onItemClick, onAddToList, onLike, onRecommend, onRate, myListIds, likedIds }) => {
     if (results.length === 0) return null;
-    return (<div className="animate-in fade-in duration-300"><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">{results.map((item) => (<ContentCard key={item.id} item={item} onClick={onItemClick} />))}</div></div>);
+    return (<div className="animate-in fade-in duration-300"><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">{results.map((item) => (<ContentCard key={item.id} item={item} onClick={onItemClick} onAddToList={onAddToList} onLike={onLike} onRecommend={onRecommend} onRate={onRate} inMyList={myListIds?.has(item.id)} isLiked={likedIds?.has(item.id)} />))}</div></div>);
 };
 
 const MyListView = ({ items, onItemClick, onRemove, onReorder }) => {
@@ -1182,19 +1270,19 @@ const ActivityView = ({ currentEmail }) => {
     );
 };
 
-const RecommendModal = ({ item, onClose, users, currentUserId, onSend }) => {
+const RecommendModal = ({ item, onClose, users, currentEmail, onSend }) => {
     const [selectedUsers, setSelectedUsers] = useState(new Set());
     const [message, setMessage] = useState('');
     const [sent, setSent] = useState(false);
 
     if (!item) return null;
 
-    const otherUsers = users.filter(u => u.id !== currentUserId);
+    const otherUsers = users.filter(u => u.email !== currentEmail);
 
-    const toggleUser = (id) => {
+    const toggleUser = (email) => {
         setSelectedUsers(prev => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            next.has(email) ? next.delete(email) : next.add(email);
             return next;
         });
     };
@@ -1207,9 +1295,9 @@ const RecommendModal = ({ item, onClose, users, currentUserId, onSend }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pt-4 pb-20 sm:p-0">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center px-4 pt-4 pb-20 sm:p-0">
             <div className="fixed inset-0 transition-opacity bg-black/80 backdrop-blur-md" onClick={onClose}></div>
-            <div className="relative z-50 w-full max-w-md bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative z-[300] w-full max-w-md bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between p-5 border-b border-gray-800">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2"><Send size={20} className="text-blue-400" /> Recomendar</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white p-1 hover:bg-gray-800 rounded-lg transition-colors"><X size={20} /></button>
@@ -1233,11 +1321,13 @@ const RecommendModal = ({ item, onClose, users, currentUserId, onSend }) => {
                             ) : (
                                 <div className="space-y-2 mb-5 max-h-48 overflow-y-auto">
                                     {otherUsers.map(u => {
-                                        const isSelected = selectedUsers.has(u.id);
+                                        const isSelected = selectedUsers.has(u.email);
                                         return (
-                                            <button key={u.id} onClick={() => toggleUser(u.id)} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${isSelected ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-gray-800/30 border border-gray-800 hover:bg-gray-800/60'}`}>
-                                                <img src={u.avatar} alt={u.name} className="w-9 h-9 rounded-full border border-gray-700" />
-                                                <div className="flex-1 text-left"><p className="text-white text-sm font-medium">{u.name}</p><p className="text-gray-500 text-xs">Miembro</p></div>
+                                            <button key={u.email} onClick={() => toggleUser(u.email)} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${isSelected ? 'bg-blue-500/10 border border-blue-500/30' : 'bg-gray-800/30 border border-gray-800 hover:bg-gray-800/60'}`}>
+                                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                                    {(u.nombre || u.email)[0].toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 text-left"><p className="text-white text-sm font-medium">{u.nombre || u.email}</p><p className="text-gray-500 text-xs">{u.email}</p></div>
                                                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-600'}`}>{isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}</div>
                                             </button>
                                         );
@@ -1261,6 +1351,8 @@ export default function App() {
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [ratingItem, setRatingItem] = useState(null);
+    const [recommendItem, setRecommendItem] = useState(null);
+    const [recommendUsers, setRecommendUsers] = useState([]);
     const [scrolled, setScrolled] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [movies, setMovies] = useState([]);
@@ -1286,12 +1378,26 @@ export default function App() {
             api.getGuardados(email),
             api.getLikes(email),
             api.getRecommendations(email),
-        ]).then(([movs, sers, guard, liks, recs]) => {
+            api.getManualRecommendations(email),
+        ]).then(([movs, sers, guard, liks, recs, manualRecs]) => {
             setMovies(movs);
             setSeries(sers);
             setMyList(guard);
             setLiked(liks);
-            setRecommendations(recs);
+            const merged = [
+                ...recs,
+                ...manualRecs.map(r => ({
+                    contenido: r.contenido,
+                    recomienda: r.recomienda,
+                    recomiendaEmail: r.recomiendaEmail,
+                    puntuacion: null,
+                    resena: r.mensaje || '',
+                    mensaje: r.mensaje || '',
+                    fecha: r.fecha,
+                    esManual: true,
+                })),
+            ];
+            setRecommendations(merged);
         }).catch(console.error)
           .finally(() => setLoadingHome(false));
     }, [isLoggedIn, currentUser?.email]);
@@ -1346,6 +1452,22 @@ export default function App() {
             }
         } catch (e) { console.error(e); }
     };
+
+    const handleRecommend = async (item, toEmails, message) => {
+        if (!currentUser || !item) return;
+        try {
+            await Promise.all(toEmails.map(toEmail =>
+                api.sendRecommendation(currentUser.email, toEmail, String(item.id), item.type, message)
+            ));
+        } catch (e) { console.error(e); }
+    };
+
+    // Fetch all users when recommend modal opens
+    useEffect(() => {
+        if (recommendItem) {
+            api.getAllUsers().then(setRecommendUsers).catch(() => {});
+        }
+    }, [recommendItem]);
 
     const handleLogout = () => {
         session.clear();
@@ -1692,9 +1814,9 @@ export default function App() {
                                             )}
                                             {viewMode === 'grid' ? (
                                                 <>
-                                                    {filteredMovies.length > 0 && <Carousel title={genreFilter ? `Películas · ${genreFilter}` : 'Películas'} subtitle="Catálogo completo" icon={Network} items={filteredMovies} onCardClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRatingItem} myListIds={myListIds} likedIds={likedIds} />}
-                                                    {filteredSeries.length > 0 && <Carousel title={genreFilter ? `Series · ${genreFilter}` : 'Series'} subtitle="Catálogo completo" icon={Activity} items={filteredSeries} onCardClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRatingItem} myListIds={myListIds} likedIds={likedIds} />}
-                                                    {!genreFilter && recsUI.length > 0 && <Carousel title="Recomendado por tus amigos" subtitle="Filtrado colaborativo" icon={Share2} items={recsUI} onCardClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRatingItem} myListIds={myListIds} likedIds={likedIds} />}
+                                                    {filteredMovies.length > 0 && <Carousel title={genreFilter ? `Películas · ${genreFilter}` : 'Películas'} subtitle="Catálogo completo" icon={Network} items={filteredMovies} onCardClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRecommendItem} onRate={setRatingItem} myListIds={myListIds} likedIds={likedIds} />}
+                                                    {filteredSeries.length > 0 && <Carousel title={genreFilter ? `Series · ${genreFilter}` : 'Series'} subtitle="Catálogo completo" icon={Activity} items={filteredSeries} onCardClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRecommendItem} onRate={setRatingItem} myListIds={myListIds} likedIds={likedIds} />}
+                                                    {!genreFilter && recsUI.length > 0 && <Carousel title="Recomendado por tus amigos" subtitle="Filtrado colaborativo" icon={Share2} items={recsUI} onCardClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRecommendItem} onRate={setRatingItem} myListIds={myListIds} likedIds={likedIds} />}
                                                 </>
                                             ) : (
                                                 <div className="space-y-3">
@@ -1720,6 +1842,13 @@ export default function App() {
                                                                     <Plus size={14} />
                                                                 </button>
                                                                 <button
+                                                                    className="p-1.5 rounded-full bg-white/10 text-gray-300 hover:text-white hover:bg-white/20 transition-all"
+                                                                    onClick={e => { e.stopPropagation(); setRecommendItem(item); }}
+                                                                    title="Recomendar"
+                                                                >
+                                                                    <Share2 size={12} />
+                                                                </button>
+                                                                <button
                                                                     className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/30 transition-all text-xs font-bold"
                                                                     onClick={e => { e.stopPropagation(); setRatingItem(item); }}
                                                                 >
@@ -1740,10 +1869,10 @@ export default function App() {
                             )}
                         </div>
                     )}
-                    {activeTab === 'search' && (searchResults.length > 0 ? (<SearchResultsView results={searchResults} onItemClick={setSelectedItem} />) : (<div className="flex flex-col items-center justify-center py-20 text-gray-500"><Search size={64} className="mb-4 opacity-30" /><p className="text-lg">No se encontraron resultados para "{searchQuery}"</p></div>))}
+                    {activeTab === 'search' && (searchResults.length > 0 ? (<SearchResultsView results={searchResults} onItemClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRecommendItem} onRate={setRatingItem} myListIds={myListIds} likedIds={likedIds} />) : (<div className="flex flex-col items-center justify-center py-20 text-gray-500"><Search size={64} className="mb-4 opacity-30" /><p className="text-lg">No se encontraron resultados para "{searchQuery}"</p></div>))}
                     {activeTab === 'mylist' && <MyListView items={myList.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleMyList({ id })} onReorder={(reordered) => setMyList(reordered.map(i => ({ id: i.id, titulo: i.title, imagen: i.image, anio: i.year })))} />}
                     {activeTab === 'liked' && <LikedView items={liked.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleLike({ id })} />}
-                    {activeTab === 'recommendations' && <RecommendationsView recommendations={recsUI.map((r, i) => ({ id: i, item: r, from: recommendations[i]?.recomienda || '?', message: recommendations[i]?.resena || '', time: new Date().toISOString() }))} users={[]} onItemClick={setSelectedItem} onAccept={(rec) => toggleMyList(rec.item)} onDismiss={() => {}} />}
+                    {activeTab === 'recommendations' && <RecommendationsView recommendations={recsUI.map((r, i) => ({ id: i, item: r, from: recommendations[i]?.recomienda || '?', message: recommendations[i]?.resena || '', time: recommendations[i]?.fecha || new Date().toISOString() }))} users={[]} onItemClick={setSelectedItem} onAccept={(rec) => toggleMyList(rec.item)} onDismiss={() => {}} />}
                     {activeTab === 'friends' && currentUser && <FriendsView currentEmail={currentUser.email} />}
                     {activeTab === 'activity' && currentUser && <ActivityView currentEmail={currentUser.email} />}
                     {activeTab === 'graph' && <GraphDashboard />}
@@ -1753,6 +1882,16 @@ export default function App() {
 
             {ratingItem && currentUser && (<RatingModal item={{ id: ratingItem.id, titulo: ratingItem.title, tipo: ratingItem.type, anio: ratingItem.year, imagen: ratingItem.image }} currentEmail={currentUser.email} onClose={() => setRatingItem(null)} onSuccess={() => {}} />)}
 
+            {recommendItem && currentUser && (
+                <RecommendModal
+                    item={recommendItem}
+                    onClose={() => setRecommendItem(null)}
+                    users={recommendUsers}
+                    currentEmail={currentUser.email}
+                    onSend={handleRecommend}
+                />
+            )}
+
             {selectedItem && (
                 <DetailPage 
                     item={selectedItem} 
@@ -1760,6 +1899,7 @@ export default function App() {
                     currentEmail={currentUser?.email} 
                     onAddToList={toggleMyList}
                     onLike={toggleLike}
+                    onRecommend={setRecommendItem}
                     myListIds={myListIds}
                     likedIds={likedIds}
                 />

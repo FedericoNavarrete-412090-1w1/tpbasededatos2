@@ -33,6 +33,11 @@ export const api = {
   // Recomendaciones de amigos
   getRecommendations: (email) => http('GET', `/recommendations/${encodeURIComponent(email)}`),
 
+  // Recomendaciones manuales entre usuarios
+  sendRecommendation: (fromEmail, toEmail, contentId, contentType, mensaje) =>
+    http('POST', '/recommendations', { fromEmail, toEmail, contentId, contentType, mensaje }),
+  getManualRecommendations: (email) => http('GET', `/recommendations/manual/${encodeURIComponent(email)}`),
+
   // Calificaciones
   calificar: (email, id, data) => http('POST', `/users/${encodeURIComponent(email)}/calificar/${id}`, data),
   getCalificaciones: (email) => http('GET', `/users/${encodeURIComponent(email)}/calificaciones`),
@@ -57,6 +62,11 @@ export const api = {
 
   // Todos los usuarios (para agregar amigos)
   getAllUsers: () => http('GET', '/users'),
+
+  // Comentarios
+  getComments: (contentType, id) => http('GET', `/comments/${contentType}/${id}`),
+  postComment: (contentType, id, email, mensaje) => http('POST', `/comments/${contentType}/${id}`, { email, mensaje }),
+  deleteComment: (contentType, id, commentId, email) => http('DELETE', `/comments/${contentType}/${id}/${commentId}/${encodeURIComponent(email)}`),
 };
 
 // Session helpers (sessionStorage)

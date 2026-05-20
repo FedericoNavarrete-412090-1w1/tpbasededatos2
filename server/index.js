@@ -6,6 +6,7 @@ import moviesRouter from './routes/movies.js';
 import usersRouter from './routes/users.js';
 import recsRouter from './routes/recommendations.js';
 import seriesRouter from './routes/series.js';
+import commentsRouter from './routes/comments.js';
 
 const app = express();
 app.use(cors());
@@ -16,6 +17,7 @@ app.use('/api/movies', moviesRouter);
 app.use('/api/series', seriesRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/recommendations', recsRouter);
+app.use('/api/comments', commentsRouter);
 
 async function initConstraints() {
   await query('CREATE CONSTRAINT usuario_email IF NOT EXISTS FOR (u:Usuario) REQUIRE u.email IS UNIQUE');

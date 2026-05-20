@@ -7,9 +7,80 @@ function toNum(v) {
   return v && typeof v.toNumber === 'function' ? v.toNumber() : v;
 }
 
-// GET /api/recommendations/:email
-// Contenido bien calificado por amigos que el usuario aún no vio (películas + series)
-// Ambas queries usan recorridos de grafo: Usuario→ES_AMIGO_DE→Usuario→CALIFICÓ→Contenido
+// POST /api/recommendations — recomendar contenido a otro usuario
+router.post('/', async (req, res) => {
+  const { fromEmail, toEmail, contentId, contentType, mensaje } = req.body;
+  if (!fromEmail || !toEmail || !contentId) {
+    return res.status(400).json({ error: 'fromEmail, toEmail y contentId son obligatorios' });
+  }
+  try {
+    const tipoLabel = contentType === 'Serie' ? 'Serie' : 'Pelicula';
+    await query(`
+      MATCH (from:Usuario {email: $fromEmail})
+      MATCH (c:${tipoLabel} {id: $contentId})
+      MERGE (from)-[r:RECOMENDÓ]->(c)
+      SET r.para = $toEmail,
+          r.mensaje = $mensaje,
+          r.fecha = $fecha
+    `, {
+      fromEmail,
+      toEmail,
+      contentId: String(contentId),
+      mensaje: mensaje || '',
+      fecha: new Date().toISOString(),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/recommendations/manual/:email — recomendaciones manuales recibidas
+router.get('/manual/:email', async (req, res) => {
+  try {
+    const records = await query(`
+      MATCH (from:Usuario)-[r:RECOMENDÓ]->(c)
+      WHERE r.para = $email AND (c:Pelicula OR c:Serie)
+      OPTIONAL MATCH (c)-[:PERTENECE_A]->(g:Genero)
+      OPTIONAL MATCH (d:Director)-[:DIRIGIÓ]->(c)
+      RETURN c,
+             collect(DISTINCT g.nombre) AS generos,
+             collect(DISTINCT d.nombre) AS directores,
+             from.nombre               AS recomienda,
+             from.email                AS recomiendaEmail,
+             r.mensaje                 AS mensaje,
+             r.fecha                   AS fecha
+      ORDER BY r.fecha DESC
+      LIMIT 20
+    `, { email: req.params.email });
+
+    const mapRecord = (r) => {
+      const node = r.get('c');
+      const p = node.properties;
+      const esSerie = node.labels.includes('Serie');
+      return {
+        contenido: {
+          id: p.id, titulo: p.titulo, anio: toNum(p.anio),
+          duracion: toNum(p.duracion), imagen: p.imagen,
+          generos: r.get('generos') || [],
+          director: (r.get('directores') || [])[0] || null,
+          tipo: esSerie ? 'Serie' : 'Película',
+          ...(esSerie ? { temporadas: toNum(p.temporadas) } : {}),
+        },
+        recomienda: r.get('recomienda'),
+        recomiendaEmail: r.get('recomiendaEmail'),
+        mensaje: r.get('mensaje'),
+        fecha: r.get('fecha'),
+      };
+    };
+
+    res.json(records.map(mapRecord));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/recommendations/:email — contenido bien calificado por amigos
 router.get('/:email', async (req, res) => {
   try {
     // ── Películas recomendadas por amigos ─────────────────────────────────
