@@ -455,4 +455,61 @@ router.get('/:email/afinidad/:friendEmail', async (req, res) => {
   }
 });
 
+// GET /api/users/:email/network — obtener la topología del grafo para visualización interactiva
+router.get('/:email/network', async (req, res) => {
+  const { email } = req.params;
+  try {
+    const records = await query(`
+      MATCH (u:Usuario {email: $email})
+      OPTIONAL MATCH (u)-[r1:LE_GUSTÓ|GUARDÓ|CALIFICÓ]->(c1)
+      WHERE c1:Pelicula OR c1:Serie
+      OPTIONAL MATCH (u)-[r2:ES_AMIGO_DE]->(f:Usuario)
+      OPTIONAL MATCH (f)-[r3:LE_GUSTÓ|GUARDÓ|CALIFICÓ]->(c2)
+      WHERE c2:Pelicula OR c2:Serie
+      RETURN u, collect(DISTINCT f) AS friends, collect(DISTINCT c1) AS userContent, collect(DISTINCT c2) AS friendContent,
+             collect(DISTINCT {from: u.email, to: c1.id, type: type(r1)}) AS userLinks,
+             collect(DISTINCT {from: u.email, to: f.email, type: 'ES_AMIGO_DE'}) AS friendLinks,
+             collect(DISTINCT {from: f.email, to: c2.id, type: type(r3)}) AS friendContentLinks
+    `, { email });
+
+    if (records.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const row = records[0];
+    const uNode = row.get('u').properties;
+    const friends = (row.get('friends') || []).map(n => n?.properties).filter(Boolean);
+    const userContent = (row.get('userContent') || []).map(n => n?.properties).filter(Boolean);
+    const friendContent = (row.get('friendContent') || []).map(n => n?.properties).filter(Boolean);
+    const userLinks = (row.get('userLinks') || []).filter(l => l.to);
+    const friendLinks = (row.get('friendLinks') || []).filter(l => l.to);
+    const friendContentLinks = (row.get('friendContentLinks') || []).filter(l => l.to);
+
+    // Build unique nodes
+    const nodeMap = new Map();
+    // User node
+    nodeMap.set(uNode.email, { id: uNode.email, label: uNode.nombre, type: 'Usuario', isCurrentUser: true });
+    // Friend nodes
+    friends.forEach(f => {
+      nodeMap.set(f.email, { id: f.email, label: f.nombre, type: 'Usuario' });
+    });
+    // Content nodes (both user's and friends')
+    [...userContent, ...friendContent].forEach(c => {
+      nodeMap.set(c.id, { id: c.id, label: c.titulo, type: c.tipo || 'Película', imagen: c.imagen });
+    });
+
+    // Build unique links
+    const linkMap = new Map();
+    [...userLinks, ...friendLinks, ...friendContentLinks].forEach(l => {
+      const key = `${l.from}-${l.to}-${l.type}`;
+      linkMap.set(key, { source: l.from, target: l.to, type: l.type });
+    });
+
+    res.json({
+      nodes: Array.from(nodeMap.values()),
+      links: Array.from(linkMap.values())
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

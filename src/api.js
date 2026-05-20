@@ -67,6 +67,9 @@ export const api = {
   getComments: (contentType, id) => http('GET', `/comments/${contentType}/${id}`),
   postComment: (contentType, id, email, mensaje) => http('POST', `/comments/${contentType}/${id}`, { email, mensaje }),
   deleteComment: (contentType, id, commentId, email) => http('DELETE', `/comments/${contentType}/${id}/${commentId}/${encodeURIComponent(email)}`),
+
+  // Grafo de Red
+  getNetwork: (email) => http('GET', `/users/${encodeURIComponent(email)}/network`),
 };
 
 // Session helpers (sessionStorage)

@@ -312,7 +312,7 @@ const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList
     );
 };
 
-const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, onRecommend, myListIds, likedIds }) => {
+const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, onRecommend, myListIds, likedIds, userRating, onRatingSuccess }) => {
     const [detail, setDetail] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [ratingOpen, setRatingOpen] = React.useState(false);
@@ -434,10 +434,22 @@ const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, onRecomm
                                     </h1>
                                     
                                     {detail?.promedio && (
-                                        <div className="flex items-center gap-2 mt-2 mb-4">
+                                        <div className="flex items-center gap-2 mt-2 mb-2">
                                             <div className="flex">{renderStars(detail.promedio)}</div>
                                             <span className="text-yellow-400 font-bold">{parseFloat(detail.promedio).toFixed(1)}/10</span>
                                             <span className="text-gray-400 text-xs">puntuación promedio</span>
+                                        </div>
+                                    )}
+
+                                    {userRating && (
+                                        <div className="flex items-center gap-2 mt-2 mb-4 bg-yellow-500/10 border border-yellow-500/25 rounded-2xl px-4 py-2 w-fit">
+                                            <span className="text-yellow-400 font-bold text-sm">Tu calificación:</span>
+                                            <div className="flex">
+                                                {Array.from({ length: 10 }, (_, i) => (
+                                                    <Star key={i} size={14} fill={i < userRating ? 'currentColor' : 'none'} className={i < userRating ? 'text-yellow-400' : 'text-gray-600'} />
+                                                ))}
+                                            </div>
+                                            <span className="text-yellow-400 font-black text-sm">{userRating}/10</span>
                                         </div>
                                     )}
                                 </div>
@@ -479,9 +491,9 @@ const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, onRecomm
                                     <button
                                         onClick={() => setRatingOpen(true)}
                                         className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-yellow-400 text-black hover:bg-yellow-500 hover:scale-105 transition-all font-bold text-sm shadow animate-none"
-                                        title="Calificar"
+                                        title={userRating ? "Editar calificación" : "Calificar"}
                                     >
-                                        <Star size={16} fill="currentColor" /> Calificar
+                                        <Star size={16} fill="currentColor" /> {userRating ? "Editar calificación" : "Calificar"}
                                     </button>
                                 </div>
                             </div>
@@ -614,7 +626,10 @@ const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, onRecomm
                         item={{ id: item.id, titulo: item.title, tipo: item.type, anio: item.year, imagen: item.image }}
                         currentEmail={currentEmail}
                         onClose={() => setRatingOpen(false)}
-                        onSuccess={() => setRatingOpen(false)}
+                        onSuccess={() => {
+                            setRatingOpen(false);
+                            onRatingSuccess?.();
+                        }}
                     />
                 )}
             </div>
@@ -694,38 +709,368 @@ const DetailModal = ({ item, onClose }) => {
     );
 };
 
-const GraphDashboard = () => (
-    <div className="animate-in fade-in duration-500">
-        <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3"><Database className="text-blue-500" size={36} /> Grafo de Conocimiento Neo4j</h1>
-            <p className="text-gray-400">Métricas en tiempo real del motor de recomendación</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
-            {[{ label: 'Nodos Totales', value: '4.502', color: 'blue' }, { label: 'Relaciones', value: '12.894', color: 'purple' }, { label: 'Latencia Promedio', value: '42ms', color: 'green' }, { label: 'Clústeres Activos', value: '18', color: 'pink' }].map((stat, i) => (
-                <div key={i} className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 relative overflow-hidden group hover:border-gray-700 transition-colors">
-                    <div className={`absolute -right-4 -top-4 w-24 h-24 bg-${stat.color}-500/10 rounded-full blur-2xl group-hover:bg-${stat.color}-500/20 transition-all`}></div>
-                    <p className="text-gray-400 text-sm font-medium mb-1 relative z-10">{stat.label}</p>
-                    <p className="text-3xl font-bold text-white relative z-10">{stat.value}</p>
-                </div>
-            ))}
-        </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 h-[500px] flex flex-col relative overflow-hidden">
-            <div className="flex justify-between items-center mb-4 z-10"><h3 className="text-xl font-bold text-white flex items-center gap-2"><Network size={20} /> Topología Usuario-Contenido</h3><NeonBadge color="blue">Consulta Cypher Activa</NeonBadge></div>
-            <div className="flex-1 relative bg-black/40 rounded-xl border border-gray-800 overflow-hidden">
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-blue-500 rounded-full shadow-[0_0_30px_rgba(59,130,246,0.6)] flex items-center justify-center z-20 cursor-pointer hover:scale-110 transition-transform"><User className="text-white" size={24} /></div>
-                {[{ top: '20%', left: '30%', color: 'purple', icon: Play, label: 'Inception' }, { top: '70%', left: '25%', color: 'green', icon: User, label: 'Usuario_492' }, { top: '30%', left: '70%', color: 'pink', icon: Database, label: 'Ciencia Ficción' }, { top: '80%', left: '65%', color: 'purple', icon: Play, label: 'Starboy' }].map((node, i) => (
-                    <React.Fragment key={i}>
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0"><line x1="50%" y1="50%" x2={node.left} y2={node.top} stroke="rgba(75, 85, 99, 0.4)" strokeWidth="2" strokeDasharray="4" /></svg>
-                        <div className={`absolute w-12 h-12 bg-${node.color}-500/20 border-2 border-${node.color}-500/50 rounded-full flex items-center justify-center z-10 cursor-pointer hover:bg-${node.color}-500/40 hover:scale-110 transition-all`} style={{ top: node.top, left: node.left, transform: 'translate(-50%, -50%)' }}><node.icon className={`text-${node.color}-400`} size={16} /><span className="absolute -bottom-6 text-xs text-gray-400 whitespace-nowrap">{node.label}</span></div>
-                    </React.Fragment>
-                ))}
-                <div className="absolute top-0 left-0 w-full h-1 bg-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.8)] animate-[scan_3s_ease-in-out_infinite_alternate]"></div>
+const GraphDashboard = ({ currentUser, onItemClick }) => {
+    const [data, setData] = useState({ nodes: [], links: [] });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [hoveredNode, setHoveredNode] = useState(null);
+    const [zoom, setZoom] = useState(1);
+    const [visibleLinks, setVisibleLinks] = useState({
+        ES_AMIGO_DE: true, LE_GUSTÓ: true, GUARDÓ: true, CALIFICÓ: true
+    });
+    
+    const dragNodeRef = useRef(null);
+    const nodesRef = useRef([]);
+    const containerRef = useRef(null);
+
+    const width = 1100;
+    const height = 650;
+
+    const linkConfig = {
+        ES_AMIGO_DE: { color: [168, 85, 247], label: 'Amigos', icon: '👥', dashed: true },
+        LE_GUSTÓ: { color: [236, 72, 153], label: 'Le Gustó', icon: '❤️', dashed: false },
+        GUARDÓ: { color: [59, 130, 246], label: 'Guardó', icon: '📌', dashed: false },
+        CALIFICÓ: { color: [234, 179, 8], label: 'Calificó', icon: '⭐', dashed: false },
+    };
+
+    useEffect(() => {
+        if (!currentUser) return;
+        setLoading(true);
+        api.getNetwork(currentUser.email)
+            .then(res => {
+                const nodes = res.nodes.map((node, index) => {
+                    const angle = (index / res.nodes.length) * 2 * Math.PI;
+                    const radius = 220 + Math.random() * 120;
+                    return { ...node, x: width / 2 + Math.cos(angle) * radius, y: height / 2 + Math.sin(angle) * radius, vx: 0, vy: 0, fx: null, fy: null };
+                });
+                const links = res.links.map(link => ({ ...link, sourceNode: nodes.find(n => n.id === link.source), targetNode: nodes.find(n => n.id === link.target) })).filter(l => l.sourceNode && l.targetNode);
+                nodesRef.current = nodes;
+                setData({ nodes, links });
+                setLoading(false);
+            })
+            .catch(err => { console.error(err); setError("Error al cargar el grafo."); setLoading(false); });
+    }, [currentUser]);
+
+    useEffect(() => {
+        if (loading || data.nodes.length === 0) return;
+        let animFrame;
+        const tick = () => {
+            const nodes = nodesRef.current;
+            const links = data.links;
+            const kRepulsion = 40000;
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const n1 = nodes[i], n2 = nodes[j];
+                    const dx = n1.x - n2.x, dy = n1.y - n2.y;
+                    const distSq = dx * dx + dy * dy || 1;
+                    const dist = Math.sqrt(distSq);
+                    if (dist < 450) {
+                        const force = kRepulsion / distSq;
+                        const fx = (dx / dist) * force, fy = (dy / dist) * force;
+                        if (n1.fx === null) { n1.vx += fx; n1.vy += fy; }
+                        if (n2.fx === null) { n2.vx -= fx; n2.vy -= fy; }
+                    }
+                }
+            }
+            links.forEach(l => {
+                if (!visibleLinks[l.type]) return;
+                const s = l.sourceNode, t = l.targetNode;
+                const dx = t.x - s.x, dy = t.y - s.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const restLength = l.type === 'ES_AMIGO_DE' ? 360 : 180;
+                const force = (dist - restLength) * 0.025;
+                const fx = (dx / dist) * force, fy = (dy / dist) * force;
+                if (s.fx === null) { s.vx += fx; s.vy += fy; }
+                if (t.fx === null) { t.vx -= fx; t.vy -= fy; }
+            });
+            nodes.forEach(n => {
+                if (n.fx !== null) { n.x = n.fx; n.y = n.fy; n.vx = 0; n.vy = 0; }
+                else {
+                    n.vx += (width / 2 - n.x) * 0.006; n.vy += (height / 2 - n.y) * 0.006;
+                    n.x += n.vx; n.y += n.vy; n.vx *= 0.86; n.vy *= 0.86;
+                    n.x = Math.max(40, Math.min(width - 40, n.x)); n.y = Math.max(40, Math.min(height - 40, n.y));
+                }
+            });
+            setData(prev => ({ ...prev, nodes: [...nodes] }));
+            animFrame = requestAnimationFrame(tick);
+        };
+        animFrame = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animFrame);
+    }, [loading, data.links, visibleLinks]);
+
+    const handlePointerDown = (e, node) => {
+        e.preventDefault();
+        dragNodeRef.current = node;
+        node.fx = node.x; node.fy = node.y;
+        const container = containerRef.current;
+        const rect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+        const handlePointerMove = (moveEvent) => {
+            if (!dragNodeRef.current) return;
+            const x = (moveEvent.clientX - rect.left - rect.width / 2) / zoom + width / 2;
+            const y = (moveEvent.clientY - rect.top - rect.height / 2) / zoom + height / 2;
+            dragNodeRef.current.fx = Math.max(25, Math.min(width - 25, x));
+            dragNodeRef.current.fy = Math.max(25, Math.min(height - 25, y));
+        };
+        const handlePointerUp = () => {
+            if (dragNodeRef.current) { dragNodeRef.current.fx = null; dragNodeRef.current.fy = null; dragNodeRef.current = null; }
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+        };
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+    };
+
+    const stats = React.useMemo(() => {
+        const users = data.nodes.filter(n => n.type === 'Usuario').length;
+        const content = data.nodes.filter(n => n.type !== 'Usuario').length;
+        return { users, content, totalNodes: data.nodes.length, totalLinks: data.links.length,
+            friends: data.links.filter(l => l.type === 'ES_AMIGO_DE').length,
+            likes: data.links.filter(l => l.type === 'LE_GUSTÓ').length,
+            saves: data.links.filter(l => l.type === 'GUARDÓ').length,
+            rates: data.links.filter(l => l.type === 'CALIFICÓ').length };
+    }, [data]);
+
+    const hoveredConnections = React.useMemo(() => {
+        if (!hoveredNode) return [];
+        return data.links.filter(l => l.source === hoveredNode.id || l.target === hoveredNode.id);
+    }, [hoveredNode, data.links]);
+
+    if (loading) return (<div className="flex flex-col items-center justify-center py-32 text-gray-400"><div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" /><p>Consultando base de datos Neo4j en tiempo real...</p></div>);
+    if (error) return (<div className="text-center py-20 text-red-400 bg-gray-900/40 border border-red-900/20 rounded-3xl"><Database size={48} className="mx-auto mb-4 opacity-50 text-red-500" /><p>{error}</p></div>);
+
+    const filteredLinks = data.links.filter(l => visibleLinks[l.type]);
+
+    return (
+        <div className="animate-in fade-in duration-500 text-left">
+            <div className="mb-6">
+                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                    <Database className="text-blue-500" size={36} /> Grafo de Relaciones Neo4j
+                </h1>
+                <p className="text-gray-400 text-sm">Visualiza y arrastra las conexiones reales de la base de datos en vivo. Usa los filtros para controlar qué relaciones se muestran.</p>
             </div>
-            <div className="mt-4 bg-black rounded-lg p-3 font-mono text-sm border border-gray-800 text-green-400 flex items-center gap-2"><span className="text-blue-500 font-bold">$</span><span>MATCH (u:User)-[:LIKES]→(m:Movie)←[:LIKES]-(other:User) WHERE u.id = 'Alex' RETURN m</span><div className="w-2 h-4 bg-green-400 animate-pulse"></div></div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                {[
+                    { label: 'Nodos', value: stats.totalNodes, icon: '🔵', color: 'from-blue-500/20 to-blue-600/5 border-blue-500/20' },
+                    { label: 'Relaciones', value: stats.totalLinks, icon: '🔗', color: 'from-purple-500/20 to-purple-600/5 border-purple-500/20' },
+                    { label: 'Amigos', value: stats.friends, icon: '👥', color: 'from-violet-500/20 to-violet-600/5 border-violet-500/20' },
+                    { label: 'Contenido', value: stats.content, icon: '🎬', color: 'from-pink-500/20 to-pink-600/5 border-pink-500/20' },
+                ].map((s, i) => (
+                    <div key={i} className={`bg-gradient-to-br ${s.color} border rounded-2xl p-4 flex items-center gap-3`}>
+                        <span className="text-2xl">{s.icon}</span>
+                        <div>
+                            <p className="text-2xl font-black text-white leading-none">{s.value}</p>
+                            <p className="text-[11px] text-gray-400 font-medium mt-0.5">{s.label}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Filter toggles */}
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+                <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mr-2">Filtrar:</span>
+                {Object.entries(linkConfig).map(([type, cfg]) => {
+                    const active = visibleLinks[type];
+                    const count = data.links.filter(l => l.type === type).length;
+                    const [r, g, b] = cfg.color;
+                    return (
+                        <button key={type} onClick={() => setVisibleLinks(prev => ({ ...prev, [type]: !prev[type] }))}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${active ? 'text-white' : 'bg-gray-900/50 border-white/5 text-gray-500 opacity-50 hover:opacity-75'}`}
+                            style={active ? { background: `rgba(${r},${g},${b},0.15)`, borderColor: `rgba(${r},${g},${b},0.4)`, boxShadow: `0 0 12px rgba(${r},${g},${b},0.25)` } : {}}
+                        >
+                            <span>{cfg.icon}</span><span>{cfg.label}</span>
+                            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${active ? 'bg-white/10' : 'bg-white/5'}`}>{count}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Graph Canvas */}
+            <div ref={containerRef} className="relative bg-gray-950/80 border border-white/10 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.9)] select-none" style={{ height: '650px' }}>
+                {/* Grid bg */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-[0.04]">
+                    <defs><pattern id="graphGrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" /></pattern></defs>
+                    <rect width="100%" height="100%" fill="url(#graphGrid)" />
+                </svg>
+
+                {/* Scaled Wrapper for 1:1 Pixel Mapping */}
+                <div 
+                    className="absolute pointer-events-none"
+                    style={{
+                        width: `${width}px`,
+                        height: `${height}px`,
+                        left: '50%',
+                        top: '50%',
+                        transform: `translate(-50%, -50%) scale(${zoom})`,
+                        transformOrigin: 'center center',
+                    }}
+                >
+                    {/* Links SVG */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-[1]">
+                        <defs>
+                            {Object.entries(linkConfig).map(([type, cfg]) => (
+                                <React.Fragment key={type}>
+                                    <filter id={`glow-${type}`} x="-50%" y="-50%" width="200%" height="200%">
+                                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                                        <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                                    </filter>
+                                </React.Fragment>
+                            ))}
+                        </defs>
+                        {filteredLinks.map((link, idx) => {
+                            const isHovered = hoveredNode?.id === link.source || hoveredNode?.id === link.target;
+                            const cfg = linkConfig[link.type] || { color: [255, 255, 255], dashed: false };
+                            const [r, g, b] = cfg.color;
+                            return (
+                                <g key={idx}>
+                                    {/* Glow line */}
+                                    <line x1={link.sourceNode.x} y1={link.sourceNode.y} x2={link.targetNode.x} y2={link.targetNode.y}
+                                        stroke={`rgba(${r},${g},${b},${isHovered ? 0.5 : 0.12})`} strokeWidth={isHovered ? 8 : 4} strokeLinecap="round"
+                                        style={{ filter: `blur(${isHovered ? 4 : 2}px)` }} />
+                                    {/* Main line */}
+                                    <line x1={link.sourceNode.x} y1={link.sourceNode.y} x2={link.targetNode.x} y2={link.targetNode.y}
+                                        stroke={`rgba(${r},${g},${b},${isHovered ? 0.85 : 0.35})`} strokeWidth={isHovered ? 2.5 : 1.5}
+                                        strokeDasharray={cfg.dashed ? "6,4" : "none"} strokeLinecap="round" />
+                                    {/* Animated particle on hover */}
+                                    {isHovered && (
+                                        <circle r="3.5" fill={`rgb(${r},${g},${b})`} filter={`url(#glow-${link.type})`}>
+                                            <animateMotion dur="1.5s" repeatCount="indefinite"
+                                                path={`M${link.sourceNode.x},${link.sourceNode.y} L${link.targetNode.x},${link.targetNode.y}`} />
+                                        </circle>
+                                    )}
+                                    {/* Relationship label on hover */}
+                                    {isHovered && (
+                                        <text x={(link.sourceNode.x + link.targetNode.x) / 2} y={(link.sourceNode.y + link.targetNode.y) / 2 - 10}
+                                            textAnchor="middle" fill={`rgb(${r},${g},${b})`} fontSize="9" fontWeight="bold"
+                                            style={{ textShadow: `0 0 8px rgba(${r},${g},${b},0.6)` }}>
+                                            {link.type.replace(/_/g, ' ')}
+                                        </text>
+                                    )}
+                                </g>
+                            );
+                        })}
+                    </svg>
+
+                    {/* Nodes Layer */}
+                    <div className="absolute inset-0 pointer-events-auto z-10">
+                        {data.nodes.map((node) => {
+                            const isUser = node.type === 'Usuario';
+                            const isCurrent = node.isCurrentUser;
+                            const hasImage = !!node.imagen;
+                            const isHov = hoveredNode?.id === node.id;
+                            const connCount = data.links.filter(l => l.source === node.id || l.target === node.id).length;
+                            const baseSize = isCurrent ? 56 : isUser ? 48 : (34 + Math.min(connCount * 3, 14));
+
+                            let borderStyle = "border-white/15 bg-gray-900/80";
+                            let glowShadow = "0 4px 12px rgba(0,0,0,0.4)";
+                            if (isCurrent) { borderStyle = "border-blue-400 bg-blue-950/90 text-blue-300"; glowShadow = "0 0 20px rgba(59,130,246,0.6), 0 0 40px rgba(59,130,246,0.2)"; }
+                            else if (isUser) { borderStyle = "border-purple-400 bg-purple-950/80 text-purple-300"; glowShadow = "0 0 15px rgba(168,85,247,0.5)"; }
+                            else if (hasImage) { borderStyle = "border-white/10"; glowShadow = isHov ? "0 0 20px rgba(6,182,212,0.5)" : "0 4px 15px rgba(0,0,0,0.5)"; }
+
+                            return (
+                                <div key={node.id}
+                                        className={`absolute rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing transition-[transform,background-color,border-color,box-shadow,width,height] duration-200 border-2 select-none ${borderStyle}`}
+                                    style={{
+                                        left: `${node.x}px`, top: `${node.y}px`,
+                                        transform: `translate(-50%, -50%) ${isHov ? 'scale(1.2)' : ''}`,
+                                        width: `${baseSize}px`, height: `${baseSize}px`, boxShadow: glowShadow,
+                                        zIndex: isHov ? 50 : isCurrent ? 30 : 20,
+                                    }}
+                                    onPointerDown={(e) => handlePointerDown(e, node)}
+                                    onMouseEnter={() => setHoveredNode(node)}
+                                    onMouseLeave={() => setHoveredNode(null)}
+                                    onClick={() => { if (!isUser) { onItemClick({ id: node.id, type: node.type === 'Serie' ? 'Serie' : 'Pelicula', titulo: node.label, imagen: node.imagen }); } }}
+                                >
+                                    {isUser ? (<User size={isCurrent ? 22 : 18} />) : hasImage ? (
+                                        <img src={node.imagen} alt={node.label} className="w-full h-full rounded-full object-cover pointer-events-none" />
+                                    ) : (<Play size={14} className="text-gray-400 pointer-events-none" />)}
+
+                                    <div className={`absolute top-full mt-2 px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap pointer-events-none shadow-lg ${isHov ? 'bg-white text-gray-900' : 'bg-black/90 border border-white/10 text-gray-200 backdrop-blur-sm'}`}
+                                        style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {node.label}
+                                    </div>
+
+                                    {isHov && connCount > 0 && (
+                                        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-cyan-500 text-white text-[9px] font-black flex items-center justify-center shadow-lg shadow-cyan-500/50">
+                                            {connCount}
+                                        </div>
+                                    )}
+                                    {isCurrent && (<div className="absolute inset-0 rounded-full border-2 border-blue-400/50 animate-ping" style={{ animationDuration: '2.5s' }} />)}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Scan line */}
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent shadow-[0_0_15px_rgba(59,130,246,0.3)] pointer-events-none animate-[graphScan_5s_linear_infinite]" />
+                </div>
+
+                {/* Hover info card */}
+                {hoveredNode && (
+                    <div className="absolute bottom-4 left-4 bg-gray-900/97 border border-white/10 rounded-2xl p-4 w-72 z-30 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-3 duration-200">
+                        <div className="flex items-start gap-3">
+                            {hoveredNode.type === 'Usuario' ? (
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${hoveredNode.isCurrentUser ? 'bg-blue-500/20 text-blue-400 ring-2 ring-blue-500/30' : 'bg-purple-500/20 text-purple-400 ring-2 ring-purple-500/30'}`}>
+                                    <User size={22} />
+                                </div>
+                            ) : hoveredNode.imagen ? (
+                                <img src={hoveredNode.imagen} alt="" className="w-12 h-16 rounded-xl object-cover flex-shrink-0 ring-1 ring-white/10" />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 flex-shrink-0"><Play size={20} /></div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">{hoveredNode.type}</p>
+                                <p className="text-white text-sm font-bold truncate leading-tight">{hoveredNode.label}</p>
+                                <p className="text-gray-500 text-[10px] truncate mt-0.5 font-mono">{hoveredNode.id}</p>
+                            </div>
+                        </div>
+                        {hoveredConnections.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-white/5">
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-2">{hoveredConnections.length} conexiones</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {Object.entries(linkConfig).map(([type, cfg]) => {
+                                        const count = hoveredConnections.filter(l => l.type === type).length;
+                                        if (!count) return null;
+                                        const [r, g, b] = cfg.color;
+                                        return (<span key={type} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: `rgba(${r},${g},${b},0.12)`, color: `rgb(${r},${g},${b})` }}>{cfg.icon} {count}</span>);
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        {!hoveredNode.isCurrentUser && hoveredNode.type !== 'Usuario' && (
+                            <p className="text-cyan-400 text-[10px] font-semibold mt-3 flex items-center gap-1 cursor-pointer hover:underline">
+                                <Play size={10} fill="currentColor" /> Click para ver detalles
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Zoom controls */}
+                <div className="absolute top-4 right-4 z-30 flex flex-col gap-1.5">
+                    <button onClick={() => setZoom(z => Math.min(z + 0.15, 1.8))} className="w-8 h-8 rounded-xl bg-gray-800/90 border border-white/10 text-white flex items-center justify-center hover:bg-gray-700/90 transition-colors text-sm font-bold shadow-lg backdrop-blur-sm" title="Acercar">+</button>
+                    <button onClick={() => setZoom(z => Math.max(z - 0.15, 0.5))} className="w-8 h-8 rounded-xl bg-gray-800/90 border border-white/10 text-white flex items-center justify-center hover:bg-gray-700/90 transition-colors text-sm font-bold shadow-lg backdrop-blur-sm" title="Alejar">−</button>
+                    <button onClick={() => setZoom(1)} className="w-8 h-8 rounded-xl bg-gray-800/90 border border-white/10 text-gray-400 flex items-center justify-center hover:bg-gray-700/90 hover:text-white transition-colors text-[10px] font-bold shadow-lg backdrop-blur-sm" title="Reset">1:1</button>
+                </div>
+            </div>
+
+            {/* Query terminal */}
+            <div className="mt-5 bg-black/95 rounded-2xl p-4 font-mono text-xs border border-white/10 text-green-400 flex flex-col gap-2 shadow-inner relative">
+                <div className="absolute right-3 top-3 text-[10px] text-gray-500 uppercase tracking-widest font-bold font-sans">Consulta Cypher</div>
+                <div className="flex items-center gap-2"><span className="text-blue-500 font-bold">$</span><span className="text-gray-300">MATCH (u:Usuario {"{"}email: "{currentUser.email}"{"}"})</span></div>
+                <div className="pl-4 text-gray-300">{"OPTIONAL MATCH (u)-[r1:LE_GUSTÓ|GUARDÓ|CALIFICÓ]->(c1) WHERE c1:Pelicula OR c1:Serie"}</div>
+                <div className="pl-4 text-gray-300">{"OPTIONAL MATCH (u)-[r2:ES_AMIGO_DE]->(f:Usuario)-[r3:LE_GUSTÓ|GUARDÓ|CALIFICÓ]->(c2) WHERE c2:Pelicula OR c2:Serie"}</div>
+                <div className="pl-4 text-green-400 font-semibold">RETURN u, f, c1, c2, r1, r2, r3</div>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="w-2 h-3.5 bg-green-400 animate-pulse" />
+                    <span className="text-[10px] text-gray-500 font-sans">Visualizando {stats.totalNodes} nodos y {stats.totalLinks} relaciones en tiempo real desde Neo4j</span>
+                </div>
+            </div>
+            <style dangerouslySetInnerHTML={{ __html: `@keyframes graphScan { 0% { transform: translateY(0); } 100% { transform: translateY(650px); } }` }} />
         </div>
-        <style dangerouslySetInnerHTML={{ __html: `@keyframes scan { 0% { transform: translateY(0); } 100% { transform: translateY(1000%); } }` }} />
-    </div>
-);
+    );
+};
+
 
 const BadgesSection = ({ cals }) => {
     const total = cals.length;
@@ -924,6 +1269,127 @@ const ProfileView = ({ onLogout, currentUser, onUpdateProfile }) => {
             <div className="pt-8 mb-12 border-t border-gray-800">
                 <button onClick={onLogout} className="flex items-center gap-2 px-6 py-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/20 transition-colors"><LogOut size={18} /> Cerrar sesión</button>
             </div>
+        </div>
+    );
+};
+
+const CinematicTransition = ({ onComplete, onEnded }) => {
+    const [step, setStep] = useState(3);
+    const [isFadingOut, setIsFadingOut] = useState(false);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setStep(prev => {
+                if (prev > 1) {
+                    return prev - 1;
+                } else if (prev === 1) {
+                    setTimeout(() => {
+                        onComplete();
+                    }, 100);
+                    return "PLAY";
+                } else {
+                    clearInterval(timer);
+                    setIsFadingOut(true);
+                    setTimeout(() => {
+                        onEnded();
+                    }, 700);
+                    return prev;
+                }
+            });
+        }, 750);
+
+        return () => clearInterval(timer);
+    }, [onComplete, onEnded]);
+
+    return (
+        <div className={`fixed inset-0 z-[9999] bg-[#030305] flex flex-col items-center justify-center select-none overflow-hidden transition-opacity duration-700 ${isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className="absolute inset-0 bg-radial-projector pointer-events-none opacity-20 animate-projector-flicker"></div>
+            <div className="absolute inset-0 pointer-events-none opacity-25 bg-film-noise animate-noise"></div>
+            <div className="absolute top-0 bottom-0 left-[35%] w-[1px] bg-white/10 pointer-events-none animate-scratch-1"></div>
+            <div className="absolute top-0 bottom-0 left-[68%] w-[1.5px] bg-white/15 pointer-events-none animate-scratch-2"></div>
+
+            <div className="relative w-64 h-64 border-4 border-white/20 rounded-full flex items-center justify-center animate-[pulse_0.4s_infinite_alternate]">
+                <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-white/10 -translate-x-1/2"></div>
+                <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-white/10 -translate-y-1/2"></div>
+                <div className="absolute inset-4 border-2 border-white/10 rounded-full"></div>
+                <div className="absolute inset-8 border border-dashed border-white/15 rounded-full"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent origin-center rounded-full animate-[spin_0.8s_linear_infinite]"></div>
+
+                <span className="text-white text-8xl font-mono font-bold tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10 select-none animate-[scale-down_0.8s_ease-in-out_infinite]">
+                    {step}
+                </span>
+            </div>
+
+            <p className="mt-8 text-xs font-mono uppercase tracking-[0.4em] text-gray-500 animate-pulse">
+                Iniciando Reproductor de Cine
+            </p>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes projector-flicker {
+                    0%, 100% { opacity: 0.15; }
+                    25% { opacity: 0.25; }
+                    50% { opacity: 0.18; }
+                    75% { opacity: 0.28; }
+                }
+                @keyframes scale-down {
+                    0% { transform: scale(1.1); }
+                    100% { transform: scale(0.9); }
+                }
+                @keyframes noise {
+                    0% { transform: translate(0, 0); }
+                    10% { transform: translate(-1%, -1%); }
+                    20% { transform: translate(1%, 2%); }
+                    30% { transform: translate(-2%, -2%); }
+                    40% { transform: translate(1%, 3%); }
+                    50% { transform: translate(-1%, 1%); }
+                    60% { transform: translate(2%, -1%); }
+                    70% { transform: translate(-2%, 1%); }
+                    80% { transform: translate(1%, -2%); }
+                    90% { transform: translate(-1%, 3%); }
+                    100% { transform: translate(0, 0); }
+                }
+                @keyframes scratch-move-1 {
+                    0% { left: 35%; opacity: 0; }
+                    5% { opacity: 0.3; }
+                    10% { left: 34.5%; opacity: 0.1; }
+                    15% { opacity: 0; }
+                    50% { left: 36%; opacity: 0; }
+                    55% { opacity: 0.4; }
+                    60% { left: 35.8%; opacity: 0.2; }
+                    65% { opacity: 0; }
+                    100% { left: 35%; opacity: 0; }
+                }
+                @keyframes scratch-move-2 {
+                    0% { left: 68%; opacity: 0; }
+                    12% { opacity: 0; }
+                    13% { left: 67%; opacity: 0.5; }
+                    15% { left: 67.2%; opacity: 0.2; }
+                    18% { opacity: 0; }
+                    70% { left: 69%; opacity: 0; }
+                    72% { left: 68.5%; opacity: 0.4; }
+                    74% { opacity: 0.1; }
+                    76% { opacity: 0; }
+                    100% { left: 68%; opacity: 0; }
+                }
+                .animate-projector-flicker {
+                    animation: projector-flicker 0.15s infinite;
+                }
+                .animate-noise {
+                    background-image: radial-gradient(circle, #fff 10%, transparent 11%), radial-gradient(circle, #fff 10%, transparent 11%);
+                    background-size: 8px 8px;
+                    background-position: 0 0, 4px 4px;
+                    animation: noise 0.2s steps(4) infinite;
+                }
+                .animate-scratch-1 {
+                    animation: scratch-move-1 3s infinite;
+                }
+                .animate-scratch-2 {
+                    animation: scratch-move-2 2.5s infinite;
+                }
+                .bg-radial-projector {
+                    background: radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, transparent 70%);
+                }
+            `}} />
         </div>
     );
 };
@@ -1144,11 +1610,11 @@ const MyListView = ({ items, onItemClick, onRemove, onReorder }) => {
         <div className="animate-in fade-in duration-500">
             <div className="mb-8"><h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3"><Bookmark className="text-blue-500" size={36} /> Mi Lista</h1><p className="text-gray-400">{items.length} {items.length === 1 ? 'ítem' : 'ítems'} guardados</p></div>
             {items.length === 0 ? (<div className="flex flex-col items-center justify-center py-20 text-gray-500"><Bookmark size={64} className="mb-4 opacity-30" /><p className="text-lg">Tu lista está vacía</p><p className="text-sm">Agrega contenido con el botón +</p></div>) : (
-                <div className="flex gap-4 md:gap-6 overflow-x-auto py-6 hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-4">
                     {items.map((item, idx) => (
                         <div
                             key={item.id}
-                            className="relative flex-none w-48 md:w-56 cursor-grab active:cursor-grabbing"
+                            className="group relative cursor-grab active:cursor-grabbing hover:scale-[1.03] transition-all duration-300"
                             draggable
                             onDragStart={() => handleDragStart(idx)}
                             onDragEnter={() => handleDragEnter(idx)}
@@ -1172,9 +1638,39 @@ const LikedView = ({ items, onItemClick, onRemove }) => (
     <div className="animate-in fade-in duration-500">
         <div className="mb-8"><h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3"><Heart className="text-pink-500" size={36} /> Me Gusta</h1><p className="text-gray-400">{items.length} {items.length === 1 ? 'ítem' : 'ítems'} que te gustaron</p></div>
         {items.length === 0 ? (<div className="flex flex-col items-center justify-center py-20 text-gray-500"><Heart size={64} className="mb-4 opacity-30" /><p className="text-lg">Aún no diste like a nada</p><p className="text-sm">Dale like con el botón 👍</p></div>) : (
-            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-6 hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {items.map((item) => (<div key={item.id} className="relative flex-none w-48 md:w-56"><ContentCard item={item} onClick={onItemClick} /><button onClick={() => onRemove(item.id)} className="absolute -top-2 -right-2 z-30 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow-lg"><X size={14} /></button></div>))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-4">
+                {items.map((item) => (<div key={item.id} className="relative group hover:scale-[1.03] transition-all duration-300"><ContentCard item={item} onClick={onItemClick} /><button onClick={() => onRemove(item.id)} className="absolute -top-2 -right-2 z-30 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow-lg"><X size={14} /></button></div>))}
             </div>)}
+    </div>
+);
+
+const RatedListView = ({ items, onItemClick }) => (
+    <div className="animate-in fade-in duration-500">
+        <div className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                <Star className="text-yellow-400" size={36} fill="currentColor" /> Mis Calificaciones
+            </h1>
+            <p className="text-gray-400">{items.length} {items.length === 1 ? 'película/serie calificada' : 'películas/series calificadas'}</p>
+        </div>
+        {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                <Star size={64} className="mb-4 opacity-30" />
+                <p className="text-lg">No calificaste nada aún</p>
+                <p className="text-sm">Califica películas o series para verlas acá</p>
+            </div>
+        ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-4">
+                {items.map((item) => (
+                    <div key={item.id} className="relative group hover:scale-[1.03] transition-all duration-300">
+                        {/* Golden rating badge over card */}
+                        <div className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-black/85 border border-yellow-500/40 text-yellow-400 px-2.5 py-1 rounded-full text-xs font-black shadow-lg backdrop-blur-sm">
+                            <Star size={12} fill="currentColor" /> {item.rating}
+                        </div>
+                        <ContentCard item={item} onClick={onItemClick} />
+                    </div>
+                ))}
+            </div>
+        )}
     </div>
 );
 
@@ -1347,6 +1843,8 @@ const RecommendModal = ({ item, onClose, users, currentEmail, onSend }) => {
 export default function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(() => !!session.get());
     const [currentUser, setCurrentUser] = useState(() => session.get());
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [pendingUser, setPendingUser] = useState(null);
     const [activeTab, setActiveTab] = useState('home');
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
@@ -1359,6 +1857,7 @@ export default function App() {
     const [series, setSeries] = useState([]);
     const [myList, setMyList] = useState([]);
     const [liked, setLiked] = useState([]);
+    const [ratedList, setRatedList] = useState([]);
     const [recommendations, setRecommendations] = useState([]);
     const [loadingHome, setLoadingHome] = useState(true);
     const [searchResults, setSearchResults] = useState([]);
@@ -1366,6 +1865,13 @@ export default function App() {
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') !== 'light');
     const [viewMode, setViewMode] = useState('grid');
     const [featuredIndex, setFeaturedIndex] = useState(0);
+    const refreshRatings = useCallback(() => {
+        if (currentUser?.email) {
+            api.getCalificaciones(currentUser.email)
+                .then(cals => setRatedList(Array.isArray(cals) ? cals : []))
+                .catch(console.error);
+        }
+    }, [currentUser?.email]);
 
     // Cargar datos al loguear
     useEffect(() => {
@@ -1379,11 +1885,13 @@ export default function App() {
             api.getLikes(email),
             api.getRecommendations(email),
             api.getManualRecommendations(email),
-        ]).then(([movs, sers, guard, liks, recs, manualRecs]) => {
+            api.getCalificaciones(email),
+        ]).then(([movs, sers, guard, liks, recs, manualRecs, cals]) => {
             setMovies(movs);
             setSeries(sers);
             setMyList(guard);
             setLiked(liks);
+            setRatedList(Array.isArray(cals) ? cals : []);
             const merged = [
                 ...recs,
                 ...manualRecs.map(r => ({
@@ -1515,6 +2023,7 @@ export default function App() {
         { id: 'home', icon: Home, label: 'Inicio' },
         { id: 'mylist', icon: Bookmark, label: 'Mi Lista', count: myList.length },
         { id: 'liked', icon: Heart, label: 'Me Gusta', count: liked.length },
+        { id: 'ratings', icon: Star, label: 'Calificadas', count: ratedList.length },
         { id: 'recommendations', icon: Share2, label: 'Recomendaciones', count: recommendations.length },
         { id: 'friends', icon: Users, label: 'Amigos' },
         { id: 'activity', icon: Activity, label: 'Actividad' },
@@ -1530,8 +2039,17 @@ export default function App() {
         });
     };
 
-    if (!isLoggedIn) {
-        return <LoginView onLogin={() => setIsLoggedIn(true)} onUserChange={(user) => { setCurrentUser(user); setIsLoggedIn(true); }} />;
+    if (!isLoggedIn && !isTransitioning) {
+        return (
+            <LoginView 
+                onLogin={() => {
+                    setIsTransitioning(true);
+                }} 
+                onUserChange={(user) => {
+                    setPendingUser(user);
+                }} 
+            />
+        );
     }
 
     return (
@@ -1872,15 +2390,29 @@ export default function App() {
                     {activeTab === 'search' && (searchResults.length > 0 ? (<SearchResultsView results={searchResults} onItemClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRecommendItem} onRate={setRatingItem} myListIds={myListIds} likedIds={likedIds} />) : (<div className="flex flex-col items-center justify-center py-20 text-gray-500"><Search size={64} className="mb-4 opacity-30" /><p className="text-lg">No se encontraron resultados para "{searchQuery}"</p></div>))}
                     {activeTab === 'mylist' && <MyListView items={myList.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleMyList({ id })} onReorder={(reordered) => setMyList(reordered.map(i => ({ id: i.id, titulo: i.title, imagen: i.image, anio: i.year })))} />}
                     {activeTab === 'liked' && <LikedView items={liked.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleLike({ id })} />}
+                    {activeTab === 'ratings' && (
+                        <RatedListView 
+                            items={ratedList.map(c => ({
+                                id: c.id || c.contenido?.id,
+                                title: c.titulo || c.contenido?.titulo || 'Contenido',
+                                image: c.imagen || c.contenido?.imagen || '',
+                                year: c.anio || c.contenido?.anio || '',
+                                rating: c.puntuacion,
+                                genres: [],
+                                type: c.tipo || c.contenido?.tipo || 'Contenido'
+                            }))} 
+                            onItemClick={setSelectedItem} 
+                        />
+                    )}
                     {activeTab === 'recommendations' && <RecommendationsView recommendations={recsUI.map((r, i) => ({ id: i, item: r, from: recommendations[i]?.recomienda || '?', message: recommendations[i]?.resena || '', time: recommendations[i]?.fecha || new Date().toISOString() }))} users={[]} onItemClick={setSelectedItem} onAccept={(rec) => toggleMyList(rec.item)} onDismiss={() => {}} />}
                     {activeTab === 'friends' && currentUser && <FriendsView currentEmail={currentUser.email} />}
                     {activeTab === 'activity' && currentUser && <ActivityView currentEmail={currentUser.email} />}
-                    {activeTab === 'graph' && <GraphDashboard />}
+                    {activeTab === 'graph' && currentUser && <GraphDashboard currentUser={currentUser} onItemClick={setSelectedItem} />}
                     {activeTab === 'profile' && currentUser && <ProfileView onLogout={handleLogout} currentUser={{ ...currentUser, name: currentUser.nombre || currentUser.name || currentUser.email }} onUpdateProfile={updateProfile} />}
                 </div>
             </main>
 
-            {ratingItem && currentUser && (<RatingModal item={{ id: ratingItem.id, titulo: ratingItem.title, tipo: ratingItem.type, anio: ratingItem.year, imagen: ratingItem.image }} currentEmail={currentUser.email} onClose={() => setRatingItem(null)} onSuccess={() => {}} />)}
+            {ratingItem && currentUser && (<RatingModal item={{ id: ratingItem.id, titulo: ratingItem.title, tipo: ratingItem.type, anio: ratingItem.year, imagen: ratingItem.image }} currentEmail={currentUser.email} onClose={() => setRatingItem(null)} onSuccess={refreshRatings} />)}
 
             {recommendItem && currentUser && (
                 <RecommendModal
@@ -1900,8 +2432,10 @@ export default function App() {
                     onAddToList={toggleMyList}
                     onLike={toggleLike}
                     onRecommend={setRecommendItem}
+                    onRate={setRatingItem}
                     myListIds={myListIds}
                     likedIds={likedIds}
+                    userRating={ratedList.find(r => String(r.id || r.contenido?.id) === String(selectedItem.id))?.puntuacion}
                 />
             )}
 
@@ -2015,6 +2549,19 @@ export default function App() {
                     border-color: #e2e8f0 !important;
                 }
             `}} />
+            {isTransitioning && (
+                <CinematicTransition 
+                    onComplete={() => {
+                        if (pendingUser) {
+                            setCurrentUser(pendingUser);
+                        }
+                        setIsLoggedIn(true);
+                    }} 
+                    onEnded={() => {
+                        setIsTransitioning(false);
+                    }}
+                />
+            )}
 
         </div>
     );
