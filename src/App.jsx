@@ -221,7 +221,7 @@ const BrowseAllModal = ({ title, items, onClose, onCardClick, onAddToList, onLik
                                 <div key={item.id}>
                                     <ContentCard
                                         item={item}
-                                        onClick={(i) => { onCardClick(i); onClose(); }}
+                                        onClick={(i) => { onCardClick(i); }}
                                         onAddToList={onAddToList}
                                         onLike={onLike}
                                         onRecommend={onRecommend}
@@ -300,7 +300,6 @@ const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList
                     onCardClick={onCardClick}
                     onAddToList={onAddToList}
                     onLike={onLike}
-                    onRecommend={onRecommend}
                     myListIds={myListIds}
                     likedIds={likedIds}
                 />
@@ -309,11 +308,13 @@ const Carousel = ({ title, items, subtitle, icon: Icon, onCardClick, onAddToList
     );
 };
 
-
-const DetailPage = ({ item, onClose, currentEmail }) => {
+const DetailPage = ({ item, onClose, currentEmail, onAddToList, onLike, myListIds, likedIds }) => {
     const [detail, setDetail] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
     const [ratingOpen, setRatingOpen] = React.useState(false);
+
+    const inMyList = myListIds?.has(item.id);
+    const isLiked = likedIds?.has(item.id);
 
     React.useEffect(() => {
         if (!item) return;
@@ -323,6 +324,11 @@ const DetailPage = ({ item, onClose, currentEmail }) => {
             .catch(() => setDetail(null))
             .finally(() => setLoading(false));
     }, [item?.id]);
+
+    React.useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, []);
 
     if (!item) return null;
 
@@ -334,93 +340,202 @@ const DetailPage = ({ item, onClose, currentEmail }) => {
     };
 
     return (
-        <div className="animate-in fade-in duration-300">
-            <button onClick={onClose} className="flex items-center gap-2 mb-6 text-gray-400 hover:text-white transition-colors">
-                <ChevronLeft size={20} /> Volver
-            </button>
-            {loading ? (
-                <div className="flex items-center justify-center py-24">
-                    <div className="w-10 h-10 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-                </div>
-            ) : (
-                <div>
-                    <div className="relative rounded-3xl overflow-hidden mb-8 h-64 md:h-96">
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent z-10" />
-                        <img src={detail?.imagen || item.image} alt={item.title} className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 left-0 p-8 z-20 w-full md:w-2/3">
-                            <div className="flex gap-2 mb-3">
-                                <NeonBadge color="blue">{detail?.tipo || item.type}</NeonBadge>
-                                <span className="text-gray-300 text-sm">{detail?.anio || item.year}</span>
-                            </div>
-                            <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2 drop-shadow-lg">{detail?.titulo || item.title}</h1>
-                            {detail?.promedio && (
-                                <div className="flex items-center gap-2 mt-2">
-                                    <div className="flex">{renderStars(detail.promedio)}</div>
-                                    <span className="text-yellow-400 font-bold">{parseFloat(detail.promedio).toFixed(1)}/10</span>
-                                    <span className="text-gray-400 text-sm">puntuación promedio</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="md:col-span-2 space-y-6">
-                            {detail?.generos?.length > 0 && (
-                                <div>
-                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Géneros</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {detail.generos.map(g => <span key={g} className="px-3 py-1 bg-gray-800 text-gray-300 rounded-full text-sm border border-gray-700">{g}</span>)}
-                                    </div>
-                                </div>
-                            )}
-                            {detail?.director && (
-                                <div>
-                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Director</h3>
-                                    <p className="text-white">{detail.director}</p>
-                                </div>
-                            )}
-                            {detail?.actores?.length > 0 && (
-                                <div>
-                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Actores</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {detail.actores.map(a => <span key={a} className="px-3 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-full text-sm">{a}</span>)}
-                                    </div>
-                                </div>
-                            )}
-                            {detail?.descripcion && (
-                                <div>
-                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Descripción</h3>
-                                    <p className="text-gray-300 leading-relaxed">{detail.descripcion}</p>
-                                </div>
-                            )}
-                        </div>
-                        <div className="space-y-4">
-                            {detail?.duracion && (
-                                <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                                    <p className="text-gray-400 text-sm mb-1">Duración</p>
-                                    <p className="text-white font-bold">{detail.duracion} min</p>
-                                </div>
-                            )}
-                            <button
-                                onClick={() => setRatingOpen(true)}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/20 transition-all font-bold"
-                            >
-                                <Star size={18} fill="currentColor" /> Calificar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {ratingOpen && currentEmail && (
-                <RatingModal
-                    item={{ id: item.id, titulo: item.title, tipo: item.type, anio: item.year, imagen: item.image }}
-                    currentEmail={currentEmail}
-                    onClose={() => setRatingOpen(false)}
-                    onSuccess={() => setRatingOpen(false)}
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 md:p-6">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose} />
+            
+            {/* Modal Box */}
+            <div className="relative w-full max-w-4xl max-h-[85vh] rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 duration-300 bg-gray-950">
+                {/* Ambient glow background */}
+                <div 
+                    className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-20 scale-105 pointer-events-none z-0" 
+                    style={{ backgroundImage: `url(${detail?.imagen || item.image})` }} 
                 />
-            )}
+                {/* Dark gradient mask */}
+                <div className="absolute inset-0 bg-gradient-to-b from-gray-950/75 via-gray-900/90 to-gray-950 z-0 pointer-events-none" />
+
+                {/* Close Button */}
+                <button 
+                    onClick={onClose} 
+                    className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/45 hover:bg-white/15 text-gray-300 hover:text-white border border-white/10 transition-all shadow-md backdrop-blur-md"
+                >
+                    <X size={20} />
+                </button>
+
+                {/* Main scrollable body */}
+                <div className="relative z-10 w-full max-h-[85vh] overflow-y-auto p-6 md:p-8">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-24">
+                            <div className="w-10 h-10 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+                        </div>
+                    ) : (
+                        <div>
+                        {/* Header Section (Poster Left + Info & Actions Right) */}
+                        <div className="flex flex-col md:flex-row gap-6 mb-8">
+                            {/* Vertical Poster Column */}
+                            <div className="w-full md:w-56 flex-shrink-0 flex justify-center md:block">
+                                <img 
+                                    src={detail?.imagen || item.image} 
+                                    alt={item.title} 
+                                    className="w-48 md:w-full h-72 md:h-80 object-cover rounded-2xl shadow-2xl border border-gray-800" 
+                                />
+                            </div>
+                            
+                            {/* Info Column */}
+                            <div className="flex-1 flex flex-col justify-between py-1 text-left">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-3 text-sm">
+                                        <NeonBadge color="blue">{detail?.tipo || item.type}</NeonBadge>
+                                        <span className="text-gray-300 font-medium">{detail?.anio || item.year}</span>
+                                        {detail?.duracion && (
+                                            <>
+                                                <span className="text-gray-500">•</span>
+                                                <span className="text-gray-300 font-medium">{detail.duracion} min</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    
+                                    <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2 leading-tight">
+                                        {detail?.titulo || item.title}
+                                    </h1>
+                                    
+                                    {detail?.promedio && (
+                                        <div className="flex items-center gap-2 mt-2 mb-4">
+                                            <div className="flex">{renderStars(detail.promedio)}</div>
+                                            <span className="text-yellow-400 font-bold">{parseFloat(detail.promedio).toFixed(1)}/10</span>
+                                            <span className="text-gray-400 text-xs">puntuación promedio</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Actions Area */}
+                                <div className="flex flex-wrap items-center gap-3 mt-4">
+                                    <button 
+                                        className="flex items-center justify-center gap-2 bg-white text-black px-6 py-2.5 rounded-full font-bold hover:bg-gray-200 hover:scale-105 transition-all text-sm shadow"
+                                        onClick={(e) => { e.stopPropagation(); }}
+                                        title="Reproducir"
+                                    >
+                                        <Play fill="currentColor" size={16} /> Reproducir
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onAddToList?.(item); }}
+                                        className={`p-2.5 rounded-full hover:scale-105 transition-all border ${
+                                            inMyList 
+                                                ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                                                : 'bg-white/5 border-white/10 text-gray-300 hover:text-white hover:bg-white/15'
+                                        }`}
+                                        title={inMyList ? 'Quitar de mi lista' : 'Agregar a mi lista'}
+                                    >
+                                        <Plus size={18} />
+                                    </button>
+                                    
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onLike?.(item); }}
+                                        className={`p-2.5 rounded-full hover:scale-105 transition-all border ${
+                                            isLiked 
+                                                ? 'bg-pink-500 border-pink-500 text-white shadow-lg shadow-pink-500/30' 
+                                                : 'bg-white/5 border-white/10 text-gray-300 hover:text-white hover:bg-white/15'
+                                        }`}
+                                        title={isLiked ? 'Quitar me gusta' : 'Me gusta'}
+                                    >
+                                        <ThumbsUp size={16} fill={isLiked ? 'currentColor' : 'none'} />
+                                    </button>
+                                    
+                                    <button
+                                        onClick={() => setRatingOpen(true)}
+                                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-yellow-400 text-black hover:bg-yellow-500 hover:scale-105 transition-all font-bold text-sm shadow animate-none"
+                                        title="Calificar"
+                                    >
+                                        <Star size={16} fill="currentColor" /> Calificar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Description */}
+                        {detail?.descripcion && (
+                            <div className="mb-6 text-left">
+                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Descripción</h3>
+                                <p className="text-gray-300 text-sm leading-relaxed">{detail.descripcion}</p>
+                            </div>
+                        )}
+
+                        {/* Genres */}
+                        {detail?.generos?.length > 0 && (
+                            <div className="mb-4 text-left">
+                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Géneros</h3>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {detail.generos.map(g => (
+                                        <span key={g} className="px-3 py-1.5 bg-white/5 text-gray-300 rounded-full text-xs border border-white/10 font-medium">
+                                            {g}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Director */}
+                        {(detail?.director || detail?.creador) && (
+                            <div className="mb-6 text-left">
+                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                    {item.type === 'Serie' ? 'Creador' : 'Director'}
+                                </h3>
+                                <div className="inline-flex bg-white/5 border border-white/10 rounded-xl p-3 min-w-[155px] max-w-[220px] items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
+                                        <User size={14} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-white text-xs font-bold truncate" title={detail.director || detail.creador}>
+                                            {detail.director || detail.creador}
+                                        </p>
+                                        <p className="text-gray-400 text-[10px] truncate">
+                                            {item.type === 'Serie' ? 'Creador Principal' : 'Director Principal'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Full Width Actors Carousel */}
+                        {detail?.actores?.length > 0 && (
+                            <div className="border-t border-white/10 pt-6 text-left">
+                                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Actores</h3>
+                                <div className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+                                    {detail.actores.map((a, idx) => (
+                                        <div key={idx} className="flex-shrink-0 bg-white/5 border border-white/10 rounded-xl p-3 min-w-[150px] max-w-[180px] flex items-center gap-2.5 hover:bg-white/10 transition-colors">
+                                            <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 flex-shrink-0">
+                                                <User size={14} />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-white text-xs font-bold truncate" title={a.nombre || a}>{a.nombre || a}</p>
+                                                {a.personaje && (
+                                                    <p className="text-gray-400 text-[10px] truncate" title={a.personaje}>{a.personaje}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+                </div>
+                {ratingOpen && currentEmail && (
+                    <RatingModal
+                        item={{ id: item.id, titulo: item.title, tipo: item.type, anio: item.year, imagen: item.image }}
+                        currentEmail={currentEmail}
+                        onClose={() => setRatingOpen(false)}
+                        onSuccess={() => setRatingOpen(false)}
+                    />
+                )}
+            </div>
         </div>
     );
 };
+
+
+
 
 const DetailModal = ({ item, onClose }) => {
     if (!item) return null;
@@ -1158,6 +1273,7 @@ export default function App() {
     const [genreFilter, setGenreFilter] = useState('');
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') !== 'light');
     const [viewMode, setViewMode] = useState('grid');
+    const [featuredIndex, setFeaturedIndex] = useState(0);
 
     // Cargar datos al loguear
     useEffect(() => {
@@ -1254,7 +1370,24 @@ export default function App() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const featured = moviesUI[0] || seriesUI[0];
+    const featuredItems = React.useMemo(() => {
+        const list = [];
+        const len = Math.max(moviesUI.length, seriesUI.length);
+        for (let i = 0; i < len; i++) {
+            if (moviesUI[i]) list.push(moviesUI[i]);
+            if (seriesUI[i]) list.push(seriesUI[i]);
+            if (list.length >= 5) break;
+        }
+        return list;
+    }, [moviesUI, seriesUI]);
+
+    useEffect(() => {
+        if (featuredItems.length <= 1) return;
+        const timer = setInterval(() => {
+            setFeaturedIndex(prev => (prev + 1) % featuredItems.length);
+        }, 6000);
+        return () => clearInterval(timer);
+    }, [featuredItems.length]);
 
     const navItems = [
         { id: 'home', icon: Home, label: 'Inicio' },
@@ -1389,7 +1522,7 @@ export default function App() {
             </div>
 
             <main className="min-h-screen relative z-10 pb-24 md:pb-0 md:ml-20">
-                <header className={`sticky top-0 w-full z-30 transition-all duration-300 px-6 py-4 flex items-center justify-between gap-4 ${scrolled ? 'bg-black/70 backdrop-blur-md border-b border-gray-800/50' : 'bg-transparent'}`}>
+                <header className={`sticky top-0 w-full z-30 transition-colors duration-300 px-6 py-4 flex items-center justify-between gap-4 border-b ${scrolled ? 'bg-black/70 backdrop-blur-md border-gray-800/50 scrolled-header' : 'bg-transparent border-transparent'}`}>
                     <div className="md:hidden flex items-center gap-2 flex-shrink-0"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"><Network className="text-white" size={18} /></div></div>
                     <div className="flex-1 flex justify-center">
                         <div className="relative w-full max-w-lg group hidden sm:block">
@@ -1416,18 +1549,91 @@ export default function App() {
                                 <div className="flex items-center justify-center py-24"><div className="w-10 h-10 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" /></div>
                             ) : (
                               <>
-                                {featured && (
-                                    <div className="relative rounded-3xl overflow-hidden mb-12 h-64 md:h-96 group">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent z-10" />
-                                        <img src={featured.image || 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1200&auto=format&fit=crop'} alt="Featured" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" />
-                                        <div className="absolute bottom-0 left-0 p-8 md:p-12 z-20 w-full md:w-2/3">
-                                            <div className="flex gap-2 mb-3"><NeonBadge color="blue">Recomendado por Neo4j</NeonBadge><NeonBadge color="purple">{featured.type}</NeonBadge></div>
-                                            <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-lg tracking-tight">{featured.title}</h1>
-                                            <div className="flex gap-4">
-                                                <button className="bg-white text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-gray-200 hover:scale-105 transition-all" onClick={() => setSelectedItem(featured)}><Play fill="currentColor" size={20} /> Ver Detalle</button>
-                                                <button className="bg-gray-800/80 text-white backdrop-blur-md px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-gray-700 transition-all border border-gray-600" onClick={() => setRatingItem(featured)}><Star size={20} /> Calificar</button>
+                                {featuredItems.length > 0 && (
+                                    <div className="relative rounded-3xl overflow-hidden mb-12 h-72 md:h-[400px] group shadow-2xl border border-gray-800/30">
+                                        {/* Slides Wrapper */}
+                                        {featuredItems.map((item, idx) => {
+                                            const isActive = idx === featuredIndex;
+                                            return (
+                                                <div 
+                                                    key={item.id} 
+                                                    className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                                                        isActive ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+                                                    }`}
+                                                >
+                                                    {/* Background overlay */}
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-transparent z-10" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-transparent to-transparent z-10" />
+                                                    
+                                                    {/* Banner Image */}
+                                                    <img 
+                                                        src={item.image || 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1200&auto=format&fit=crop'} 
+                                                        alt={item.title} 
+                                                        className={`w-full h-full object-cover transform transition-transform duration-[8000ms] ease-out ${
+                                                            isActive ? 'scale-105' : 'scale-100'
+                                                        }`} 
+                                                    />
+                                                    
+                                                    {/* Content Overlay */}
+                                                    <div className="absolute bottom-0 left-0 p-8 md:p-14 z-20 w-full md:w-2/3 text-left">
+                                                        <div className="flex gap-2 mb-3">
+                                                            <NeonBadge color="blue">Recomendado por Neo4j</NeonBadge>
+                                                            <NeonBadge color="purple">{item.type}</NeonBadge>
+                                                        </div>
+                                                        <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-lg tracking-tight leading-tight">
+                                                            {item.title}
+                                                        </h1>
+                                                        <div className="flex gap-4">
+                                                            <button 
+                                                                className="bg-white text-black px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-gray-200 hover:scale-105 transition-all text-sm md:text-base shadow-lg" 
+                                                                onClick={() => setSelectedItem(item)}
+                                                            >
+                                                                <Play fill="currentColor" size={20} /> Ver Detalle
+                                                            </button>
+                                                            <button 
+                                                                className="bg-gray-800/80 text-white backdrop-blur-md px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-gray-700 transition-all border border-gray-600 text-sm md:text-base shadow-lg" 
+                                                                onClick={() => setRatingItem(item)}
+                                                            >
+                                                                <Star size={20} /> Calificar
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Prev / Next controls */}
+                                        {featuredItems.length > 1 && (
+                                            <>
+                                                <button 
+                                                    onClick={() => setFeaturedIndex(prev => (prev - 1 + featuredItems.length) % featuredItems.length)}
+                                                    className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 border border-white/10 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+                                                >
+                                                    <ChevronLeft size={24} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => setFeaturedIndex(prev => (prev + 1) % featuredItems.length)}
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 border border-white/10 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:scale-110"
+                                                >
+                                                    <ChevronRight size={24} />
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* Dot Indicators */}
+                                        {featuredItems.length > 1 && (
+                                            <div className="absolute bottom-5 right-8 z-20 flex gap-2">
+                                                {featuredItems.map((_, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => setFeaturedIndex(idx)}
+                                                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                                                            idx === featuredIndex ? 'w-6 bg-blue-500' : 'w-1.5 bg-gray-500 hover:bg-gray-400'
+                                                        }`}
+                                                    />
+                                                ))}
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 )}
                                 {/* Filtro por género */}
@@ -1534,10 +1740,6 @@ export default function App() {
                             )}
                         </div>
                     )}
-                    {selectedItem && activeTab !== 'profile' ? (
-                        <DetailPage item={selectedItem} onClose={() => setSelectedItem(null)} currentEmail={currentUser?.email} />
-                    ) : (
-                        <>
                     {activeTab === 'search' && (searchResults.length > 0 ? (<SearchResultsView results={searchResults} onItemClick={setSelectedItem} />) : (<div className="flex flex-col items-center justify-center py-20 text-gray-500"><Search size={64} className="mb-4 opacity-30" /><p className="text-lg">No se encontraron resultados para "{searchQuery}"</p></div>))}
                     {activeTab === 'mylist' && <MyListView items={myList.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleMyList({ id })} onReorder={(reordered) => setMyList(reordered.map(i => ({ id: i.id, titulo: i.title, imagen: i.image, anio: i.year })))} />}
                     {activeTab === 'liked' && <LikedView items={liked.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleLike({ id })} />}
@@ -1546,12 +1748,22 @@ export default function App() {
                     {activeTab === 'activity' && currentUser && <ActivityView currentEmail={currentUser.email} />}
                     {activeTab === 'graph' && <GraphDashboard />}
                     {activeTab === 'profile' && currentUser && <ProfileView onLogout={handleLogout} currentUser={{ ...currentUser, name: currentUser.nombre || currentUser.name || currentUser.email }} onUpdateProfile={updateProfile} />}
-                        </>
-                    )}
                 </div>
             </main>
 
             {ratingItem && currentUser && (<RatingModal item={{ id: ratingItem.id, titulo: ratingItem.title, tipo: ratingItem.type, anio: ratingItem.year, imagen: ratingItem.image }} currentEmail={currentUser.email} onClose={() => setRatingItem(null)} onSuccess={() => {}} />)}
+
+            {selectedItem && (
+                <DetailPage 
+                    item={selectedItem} 
+                    onClose={() => setSelectedItem(null)} 
+                    currentEmail={currentUser?.email} 
+                    onAddToList={toggleMyList}
+                    onLike={toggleLike}
+                    myListIds={myListIds}
+                    likedIds={likedIds}
+                />
+            )}
 
             <style dangerouslySetInnerHTML={{ __html: `
                 .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -1583,6 +1795,10 @@ export default function App() {
                 .light-mode aside button.text-blue-400 { color: #2563eb !important; }
                 /* Header */
                 .light-mode header {
+                    background: transparent !important;
+                    border-color: transparent !important;
+                }
+                .light-mode header.scrolled-header {
                     background: rgba(241,245,249,0.9) !important;
                     border-color: #cbd5e1 !important;
                 }

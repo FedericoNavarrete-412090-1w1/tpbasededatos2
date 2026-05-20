@@ -33,9 +33,9 @@ export default function RatingModal({ item, currentEmail, onClose, onSuccess }) 
   const active = hover || puntuacion;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center px-4">
       <div className="fixed inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
-      <div className="relative z-50 w-full max-w-md bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative z-10 w-full max-w-md bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-5 border-b border-gray-800">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Star size={20} className="text-yellow-400" /> Calificar
