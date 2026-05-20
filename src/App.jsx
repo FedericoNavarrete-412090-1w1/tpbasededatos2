@@ -96,42 +96,15 @@ const ContentCard = ({ item, onClick, onAddToList, onLike, onRecommend, onRate, 
                 </div>
             )}
 
+            {isLiked && (
+                <div className="absolute top-2.5 right-2.5 z-20 flex items-center justify-center w-7 h-7 bg-black/80 border border-red-500/50 rounded-full shadow-lg backdrop-blur-sm">
+                    <Heart size={13} fill="currentColor" className="text-red-500" />
+                </div>
+            )}
+
             <div className="absolute bottom-0 left-0 right-0 p-3.5 translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
                 <h3 className="text-white font-bold text-sm leading-tight truncate tracking-tight">{item.title}</h3>
                 <p className="text-gray-400 text-xs mt-0.5 truncate font-medium">{item.type || ''} · {item.year}</p>
-
-                <div className="flex items-center justify-between mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
-                    <div className="flex items-center gap-1.5">
-                        <button
-                            className="bg-white text-black p-1.5 rounded-full hover:bg-gray-200 hover:scale-110 transition-transform shadow"
-                            onClick={(e) => { e.stopPropagation(); onRecommend?.(item); }}
-                            title="Recomendar"
-                        >
-                            <Share2 size={12} />
-                        </button>
-                        <button
-                            className={`p-1.5 rounded-full hover:scale-110 transition-transform ${inMyList ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/40' : 'bg-white/10 text-gray-300 hover:text-white hover:bg-white/20'}`}
-                            onClick={(e) => { e.stopPropagation(); onAddToList?.(item); }}
-                            title={inMyList ? 'Quitar de mi lista' : 'Agregar a mi lista'}
-                        >
-                            <Plus size={12} />
-                        </button>
-                        <button
-                            className={`p-1.5 rounded-full hover:scale-110 transition-transform ${isLiked ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/40' : 'bg-white/10 text-gray-300 hover:text-white hover:bg-white/20'}`}
-                            onClick={(e) => { e.stopPropagation(); onLike?.(item); }}
-                            title={isLiked ? 'Quitar me gusta' : 'Me gusta'}
-                        >
-                            <ThumbsUp size={11} fill={isLiked ? 'currentColor' : 'none'} />
-                        </button>
-                    </div>
-                    <button
-                        className="p-1.5 rounded-full bg-yellow-400/15 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/30 hover:scale-110 transition-all"
-                        onClick={(e) => { e.stopPropagation(); onRate?.(item); }}
-                        title="Calificar"
-                    >
-                        <Star size={11} fill="currentColor" />
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -1451,7 +1424,7 @@ const LoginView = ({ onLogin, onUserChange }) => {
     const [newName, setNewName] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [newPassword, setNewPassword] = useState('');
-    const [newAvatar, setNewAvatar] = useState(avatarOptions[0]);
+    const [newAvatar, setNewAvatar] = useState('');
     const [createError, setCreateError] = useState('');
     const fileInputRef = useRef(null);
 
@@ -1549,8 +1522,11 @@ const LoginView = ({ onLogin, onUserChange }) => {
                     </div>
                     <div className="bg-gray-900/70 backdrop-blur-xl border border-gray-700/60 rounded-2xl p-8 shadow-2xl">
                         <div className="flex justify-center mb-6">
-                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-700 cursor-pointer hover:border-blue-500 transition-all duration-300 group" onClick={() => fileInputRef.current?.click()}>
-                                <img src={newAvatar} alt="Preview" className="w-full h-full object-cover" />
+                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-700 cursor-pointer hover:border-blue-500 transition-all duration-300 group bg-gray-800" onClick={() => fileInputRef.current?.click()}>
+                                {newAvatar
+                                    ? <img src={newAvatar} alt="Preview" className="w-full h-full object-cover" />
+                                    : <div className="w-full h-full flex items-center justify-center"><Camera size={28} className="text-gray-500" /></div>
+                                }
                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full">
                                     <Camera size={22} className="text-white" />
                                 </div>
@@ -1569,10 +1545,6 @@ const LoginView = ({ onLogin, onUserChange }) => {
                             <div>
                                 <label className="block text-sm font-medium text-gray-400 mb-1.5">Contraseña</label>
                                 <input type="password" value={newPassword} onChange={(e) => { setNewPassword(e.target.value); setCreateError(''); }} placeholder="Mínimo 4 caracteres" className="w-full bg-black/40 border border-gray-700 text-white placeholder-gray-500 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-1.5">Elegir avatar (opcional)</label>
-                                <div className="grid grid-cols-5 gap-2">{avatarOptions.slice(0, 5).map((av, idx) => (<button key={idx} onClick={() => setNewAvatar(av)} type="button" className={`w-full aspect-square rounded-full overflow-hidden border-2 transition-all hover:scale-110 ${newAvatar === av ? 'border-blue-500 scale-110 shadow-lg shadow-blue-500/30' : 'border-transparent hover:border-gray-500'}`}><img src={av} alt="" className="w-full h-full object-cover" /></button>))}</div>
                             </div>
                             {createError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2">{createError}</p>}
                             <button type="submit" className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold py-3 rounded-xl hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-green-500/20 mt-2">Crear Perfil</button>
@@ -1692,7 +1664,7 @@ const LikedView = ({ items, onItemClick, onRemove }) => (
     </div>
 );
 
-const RatedListView = ({ items, onItemClick }) => (
+const RatedListView = ({ items, onItemClick, likedIds = new Set() }) => (
     <div className="animate-in fade-in duration-500">
         <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3">
@@ -1710,9 +1682,15 @@ const RatedListView = ({ items, onItemClick }) => (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 py-4">
                 {items.map((item) => (
                     <div key={item.id} className="relative group hover:scale-[1.03] transition-all duration-300">
-                        {/* Golden rating badge over card */}
-                        <div className="absolute top-3 right-3 z-30 flex items-center gap-1 bg-black/85 border border-yellow-500/40 text-yellow-400 px-2.5 py-1 rounded-full text-xs font-black shadow-lg backdrop-blur-sm">
-                            <Star size={12} fill="currentColor" /> {item.rating}
+                        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5">
+                            {likedIds.has(String(item.id)) && (
+                                <div className="flex items-center justify-center w-6 h-6 bg-black/85 border border-red-500/50 rounded-full shadow-lg backdrop-blur-sm">
+                                    <Heart size={11} fill="currentColor" className="text-red-500" />
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1 bg-black/85 border border-yellow-500/40 text-yellow-400 px-2.5 py-1 rounded-full text-xs font-black shadow-lg backdrop-blur-sm">
+                                <Star size={12} fill="currentColor" /> {item.rating}
+                            </div>
                         </div>
                         <ContentCard item={item} onClick={onItemClick} />
                     </div>
@@ -2070,7 +2048,6 @@ export default function App() {
     const navItems = [
         { id: 'home', icon: Home, label: 'Inicio' },
         { id: 'mylist', icon: Bookmark, label: 'Mi Lista', count: myList.length },
-        { id: 'liked', icon: Heart, label: 'Me Gusta', count: liked.length },
         { id: 'ratings', icon: Star, label: 'Calificadas', count: ratedList.length },
         { id: 'recommendations', icon: Share2, label: 'Recomendaciones', count: recommendations.length },
         { id: 'friends', icon: Users, label: 'Amigos' },
@@ -2212,14 +2189,8 @@ export default function App() {
             <main className="min-h-screen relative z-10 pb-24 md:pb-0 md:ml-20">
                 <header className={`sticky top-0 w-full z-30 transition-colors duration-300 px-6 py-4 flex items-center justify-between gap-4 border-b ${scrolled ? 'bg-black/70 backdrop-blur-md border-gray-800/50 scrolled-header' : 'bg-transparent border-transparent'}`}>
                     <div className="md:hidden flex items-center gap-2 flex-shrink-0"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"><Network className="text-white" size={18} /></div></div>
-                    <div className="flex-1 flex justify-center">
-                        <div className="relative w-full max-w-lg group hidden sm:block">
-                            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-500 group-focus-within:text-blue-400 transition-colors" size={18} />
-                            <input type="text" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); if (e.target.value.trim() && activeTab === 'home') setActiveTab('search'); if (!e.target.value.trim() && activeTab === 'search') setActiveTab('home'); }} placeholder="Buscar películas, series, géneros..." className="w-full bg-gray-900/60 border border-gray-700/50 text-white placeholder-gray-600 rounded-2xl py-2.5 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40 transition-all backdrop-blur-sm text-sm" />
-                        </div>
-                    </div>
+                    <div className="flex-1" />
                     <div className="flex items-center gap-3 flex-shrink-0">
-                        <button className="text-gray-400 hover:text-white sm:hidden"><Search size={22} /></button>
                         <button
                             onClick={toggleDarkMode}
                             className="p-2 rounded-full bg-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-700 transition-all border border-gray-700"
@@ -2437,9 +2408,8 @@ export default function App() {
                     )}
                     {activeTab === 'search' && (searchResults.length > 0 ? (<SearchResultsView results={searchResults} onItemClick={setSelectedItem} onAddToList={toggleMyList} onLike={toggleLike} onRecommend={setRecommendItem} onRate={setRatingItem} myListIds={myListIds} likedIds={likedIds} />) : (<div className="flex flex-col items-center justify-center py-20 text-gray-500"><Search size={64} className="mb-4 opacity-30" /><p className="text-lg">No se encontraron resultados para "{searchQuery}"</p></div>))}
                     {activeTab === 'mylist' && <MyListView items={myList.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleMyList({ id })} onReorder={(reordered) => setMyList(reordered.map(i => ({ id: i.id, titulo: i.title, imagen: i.image, anio: i.year })))} />}
-                    {activeTab === 'liked' && <LikedView items={liked.map(i => ({ id: i.id, title: i.titulo, image: i.imagen, year: i.anio, genres: [], type: 'Contenido' }))} onItemClick={setSelectedItem} onRemove={(id) => toggleLike({ id })} />}
                     {activeTab === 'ratings' && (
-                        <RatedListView 
+                        <RatedListView
                             items={ratedList.map(c => ({
                                 id: c.id || c.contenido?.id,
                                 title: c.titulo || c.contenido?.titulo || 'Contenido',
@@ -2448,8 +2418,9 @@ export default function App() {
                                 rating: c.puntuacion,
                                 genres: [],
                                 type: c.tipo || c.contenido?.tipo || 'Contenido'
-                            }))} 
-                            onItemClick={setSelectedItem} 
+                            }))}
+                            onItemClick={setSelectedItem}
+                            likedIds={likedIds}
                         />
                     )}
                     {activeTab === 'recommendations' && <RecommendationsView recommendations={recsUI.map((r, i) => ({ id: i, item: r, from: recommendations[i]?.recomienda || '?', message: recommendations[i]?.resena || '', time: recommendations[i]?.fecha || new Date().toISOString() }))} users={[]} onItemClick={setSelectedItem} onAccept={(rec) => toggleMyList(rec.item)} onDismiss={() => {}} />}
